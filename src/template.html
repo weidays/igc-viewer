@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IGC Viewer</title>
+<style>/*LEAFLET_CSS*/</style>
+<style>
+:root{--bg:#f4f5f7;--panel:#fff;--line:#e2e5e9;--text:#1c2228;--muted:#6b7480;--acc:#2563eb;--selbg:#e6efff;--track:#e11d48;--prof:#2563eb;--proffill:rgba(37,99,235,.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#14171b;--panel:#1c2026;--line:#2b3139;--text:#e5e8ec;--muted:#8a939e;--acc:#60a5fa;--selbg:#1d3557;--track:#fb7185;--prof:#60a5fa;--proffill:rgba(96,165,250,.15)}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:13px/1.4 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);display:grid;grid-template-columns:var(--sidew,340px) 5px minmax(0,1fr);height:100vh;overflow:hidden}
+#side{display:flex;flex-direction:column;background:var(--panel);min-width:0}
+#tools{padding:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.row{display:flex;gap:6px}
+button,select,input{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+button{cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+#search{flex:1;min-width:0}
+#count{color:var(--muted);font-size:12px}
+#list{flex:1;overflow:auto;outline:none}
+.item{padding:6px 10px 6px 12px;border-bottom:1px solid var(--line);cursor:pointer;overflow:hidden}
+.item .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.item .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px}
+.item:hover{background:var(--bg)}
+.item.sel{background:var(--selbg);box-shadow:inset 3px 0 var(--acc)}
+.item.del .n{text-decoration:line-through;color:#dc2626}
+.item.del .n::before{content:"待删 ";text-decoration:none;display:inline-block;margin-right:4px;font-size:11px;font-weight:600;color:#fff;background:#dc2626;border-radius:3px;padding:0 4px}
+.item .w{color:#d97706}
+#delrow{display:flex;gap:6px;align-items:center}
+#delrow #count{flex:1}
+button.danger{background:#dc2626;border-color:#dc2626;color:#fff}
+button:disabled{opacity:.45;cursor:default;border-color:var(--line)}
+#pathrow{display:flex;gap:10px;align-items:center}
+#pathrow #path{flex:1;min-width:0}
+#btnMark{padding:2px 8px;font-size:12px}
+#btnMark.on{background:#dc2626;border-color:#dc2626;color:#fff}
+.warn{color:#d97706!important;font-weight:600}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);max-width:560px;width:calc(100% - 32px);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+#dlgList{max-height:220px;overflow:auto;font-family:Consolas,monospace;font-size:12px;color:var(--muted);background:var(--bg);border-radius:6px;padding:8px;margin:10px 0;white-space:pre}
+#dlg .row{justify-content:flex-end;flex-wrap:wrap}
+#split{cursor:col-resize;background:var(--line)}
+#split:hover{background:var(--acc)}
+#main{display:grid;grid-template-rows:auto minmax(0,1fr) 150px;min-width:0;min-height:0}
+#info{background:var(--panel);border-bottom:1px solid var(--line);padding:8px 14px}
+#path{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:all}
+#stats{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:4px}
+#stats b{font-weight:600}
+#stats span{color:var(--muted)}
+#map{min-height:0;background:#dfe3e8}
+@media (prefers-color-scheme:dark){#map{background:#22272e}}
+#profwrap{position:relative;background:var(--panel);border-top:1px solid var(--line)}
+#prof{width:100%;height:100%;display:block;cursor:crosshair}
+#tip{position:absolute;top:6px;right:10px;font-size:12px;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);z-index:500;pointer-events:none;text-align:center;padding:20px}
+#empty[hidden]{display:none}
+.leaflet-control-layers-toggle{background-image:none!important;width:auto!important;height:auto!important;padding:5px 9px;font-size:12px;color:#333;text-decoration:none}
+.leaflet-control-layers-toggle::after{content:"底图"}
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle{display:none}
+#empty b{color:var(--text);font-size:15px}
+#mapbox{position:relative;min-height:0}
+#mapbox #map{position:absolute;inset:0}
+body.drag #mapbox::after{content:"松开以加载 IGC 文件 / 文件夹";position:absolute;inset:10px;border:3px dashed var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(37,99,235,.08);z-index:1000}
+.leaflet-container{font:inherit}
+kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-size:11px}
+</style>
+</head>
+<body>
+<aside id="side">
+  <div id="tools">
+    <div class="row">
+      <button id="btnDir" class="primary" title="选择文件夹（会递归扫描子文件夹）">打开文件夹</button>
+      <button id="btnFiles" title="选择一个或多个 .igc 文件">打开文件</button>
+      <button id="btnLast" hidden title="重新打开上次的文件夹">上次文件夹</button>
+    </div>
+    <div class="row">
+      <input id="search" type="search" placeholder="筛选文件名 / 日期 / 飞行员…">
+      <select id="sort" title="排序">
+        <option value="name">名称 ↑</option>
+        <option value="-name">名称 ↓</option>
+        <option value="-date">日期 新→旧</option>
+        <option value="date">日期 旧→新</option>
+      </select>
+    </div>
+    <div id="delrow">
+      <div id="count">未加载文件</div>
+      <button id="btnDel" class="danger" disabled title="处理所有标了「待删」的文件">删除已标记 (0)</button>
+    </div>
+    <div style="color:var(--muted);font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> 切换 · <kbd>Del</kbd> / <kbd>D</kbd> 标记待删并跳到下一个</div>
+  </div>
+  <div id="list" tabindex="0"></div>
+  <input id="fileInput" type="file" accept=".igc,.IGC" multiple hidden>
+  <input id="dirInput" type="file" webkitdirectory hidden>
+</aside>
+<div id="split"></div>
+<main id="main">
+  <div id="info">
+    <div id="pathrow"><div id="path">—</div><button id="btnMark" hidden>标记待删 (Del)</button></div>
+    <div id="stats"></div>
+  </div>
+  <div id="mapbox">
+    <div id="map"></div>
+    <div id="empty"><b>打开一个包含 .igc 的文件夹</b><div>或把文件 / 文件夹直接拖进来</div></div>
+  </div>
+  <div id="profwrap"><canvas id="prof"></canvas><div id="tip"></div></div>
+</main>
+<dialog id="dlg">
+  <b id="dlgTitle"></b>
+  <div id="dlgList"></div>
+  <div id="dlgNote" style="color:var(--muted);font-size:12px;margin-bottom:12px"></div>
+  <div class="row">
+    <button id="dlgCancel">取消</button>
+    <button id="dlgHard" class="danger">永久删除</button>
+    <button id="dlgMove" class="primary">移到「_已删除」文件夹（可恢复）</button>
+  </div>
+</dialog>
+
+<script>/*LEAFLET_JS*/</script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const S = { files: [], view: [], sel: -1, cache: new Map(), loadTok: 0, metaTok: 0, track: null, hoverIdx: -1 };
+const CACHE_MAX = 40;
+
+/* ---------------- IGC parsing ---------------- */
+function decode(buf) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+  catch { return new TextDecoder('windows-1252').decode(buf); }
+}
+function parseHeaderLine(L, h) {
+  if (L.length < 5) return;
+  const code = L.substr(2, 3).toUpperCase();
+  const ci = L.indexOf(':');
+  const val = (ci >= 0 ? L.slice(ci + 1) : L.slice(5)).trim();
+  if (code === 'DTE') { const m = val.match(/(\d{2})(\d{2})(\d{2})/) || L.match(/(\d{2})(\d{2})(\d{2})/); if (m) h.date = `20${m[3]}-${m[2]}-${m[1]}`; }
+  else if (code === 'PLT') h.pilot = val;
+  else if (code === 'GTY') h.glider = val;
+  else if (code === 'GID') h.gid = val;
+  else if (code === 'SIT') h.site = val;
+  else if (code === 'TZN' || code === 'TZO') { const n = parseFloat(val); if (!isNaN(n)) h.tz = n; }
+}
+function parseIGC(text) {
+  const h = {};
+  const n0 = text.length >> 5;
+  const t = [], lat = [], lon = [], ga = [], pa = [];
+  let lastS = -1, dayOff = 0, anyG = false, anyP = false;
+  let i = 0; const N = text.length;
+  while (i < N) {
+    let j = text.indexOf('\n', i); if (j < 0) j = N;
+    const c = text.charCodeAt(i);
+    if (c === 66 && j - i >= 35) { // 'B'
+      const L = text.substring(i, j);
+      let s = (+L.substr(1, 2)) * 3600 + (+L.substr(3, 2)) * 60 + (+L.substr(5, 2));
+      let la = +L.substr(7, 2) + (+L.substr(9, 5)) / 60000; if (L[14] === 'S') la = -la;
+      let lo = +L.substr(15, 3) + (+L.substr(18, 5)) / 60000; if (L[23] === 'W') lo = -lo;
+      if (!(la === 0 && lo === 0) && la === la && lo === lo && s === s) {
+        s += dayOff; if (lastS >= 0 && s < lastS - 43200) { dayOff += 86400; s += 86400; }
+        if (s >= lastS) { // drop duplicate / backwards fixes
+          lastS = s;
+          const p = parseInt(L.substr(25, 5), 10) || 0, g = parseInt(L.substr(30, 5), 10) || 0;
+          if (p) anyP = true; if (g) anyG = true;
+          t.push(s); lat.push(la); lon.push(lo); pa.push(p); ga.push(g);
+        }
+      }
+    } else if (c === 72) { // 'H'
+      parseHeaderLine(text.substring(i, j).replace(/\r$/, ''), h);
+    }
+    i = j + 1;
+  }
+  const alt = anyG ? ga : pa;
+  return { h, t, lat, lon, alt, altSrc: anyG ? 'GPS' : (anyP ? '气压' : '无') , stats: stats(t, lat, lon, alt) };
+}
+const R = 6371.0088, D2R = Math.PI / 180;
+function dist(a1, o1, a2, o2) {
+  const dLa = (a2 - a1) * D2R, dLo = (o2 - o1) * D2R;
+  const x = Math.sin(dLa / 2) ** 2 + Math.cos(a1 * D2R) * Math.cos(a2 * D2R) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(x)));
+}
+function stats(t, lat, lon, alt) {
+  const n = t.length; if (!n) return null;
+  let len = 0, maxD = 0, maxA = -1e9, minA = 1e9, maxV = 0, minV = 0, maxSp = 0;
+  const jumps = []; // GPS 跳点：单步 >2 km 且速度 >250 km/h，或单步高度变化 >60 m/s
+  for (let k = 0; k < n; k++) {
+    if (k) {
+      const d = dist(lat[k - 1], lon[k - 1], lat[k], lon[k]), dt = t[k] - t[k - 1];
+      if ((d > 2 && (dt <= 0 || d / dt * 3600 > 250)) || (dt > 0 && dt <= 30 && Math.abs(alt[k] - alt[k - 1]) / dt > 60)) jumps.push(k);
+      else len += d;
+    }
+    const d = dist(lat[0], lon[0], lat[k], lon[k]); if (d > maxD) maxD = d;
+    if (alt[k] > maxA) maxA = alt[k]; if (alt[k] < minA) minA = alt[k];
+  }
+  // smoothed vario & speed over ~20s window
+  let b = 0;
+  for (let k = 1; k < n; k++) {
+    while (t[k] - t[b] > 20) b++;
+    const dt = t[k] - t[b]; if (dt < 10) continue;
+    const v = (alt[k] - alt[b]) / dt; if (v > maxV) maxV = v; if (v < minV) minV = v;
+    const sp = dist(lat[b], lon[b], lat[k], lon[k]) / dt * 3600; if (sp > maxSp && sp < 400) maxSp = sp;
+  }
+  return { n, dur: t[n - 1] - t[0], len, maxD, maxA, minA, maxV, minV, maxSp, gain: maxA - alt[0], jumps };
+}
+
+/* ---------------- file list ---------------- */
+function addEntries(list, label, root) {
+  S.files = list; S.cache.clear(); S.sel = -1;
+  S.rootLabel = label || ''; S.root = root || null;
+  loadMarks();
+  applyView(); scanMeta();
+  if (S.view.length) select(0);
+  else showEmpty(list.length ? '' : '这里没有找到 .igc 文件');
+}
+function entryFile(e) { return e.file ? Promise.resolve(e.file) : e.h.getFile(); }
+function nameDate(name) { const m = name.match(/(20\d{2})[-_.]?(\d{2})[-_.]?(\d{2})/); return m ? `${m[1]}-${m[2]}-${m[3]}` : ''; }
+function applyView() {
+  const q = $('#search').value.trim().toLowerCase();
+  let v = S.files;
+  if (q) { const parts = q.split(/\s+/); v = v.filter(e => { const s = (e.path + ' ' + (e.meta ? (e.meta.date || '') + ' ' + (e.meta.pilot || '') + ' ' + (e.meta.glider || '') + ' ' + (e.meta.site || '') : '')).toLowerCase(); return parts.every(p => s.includes(p)); }); }
+  const so = $('#sort').value, dir = so[0] === '-' ? -1 : 1, key = so.replace('-', '');
+  const coll = new Intl.Collator('zh', { numeric: true });
+  v = v.slice().sort((a, b) => {
+    if (key === 'date') { const da = (a.meta && a.meta.date) || nameDate(a.name), db = (b.meta && b.meta.date) || nameDate(b.name); if (da !== db) return da < db ? -dir : dir; }
+    return dir * coll.compare(a.path, b.path);
+  });
+  const cur = S.view[S.sel];
+  S.view = v;
+  S.sel = cur ? v.indexOf(cur) : -1;
+  renderList();
+}
+function metaLine(e) {
+  const m = e.meta; if (!m) return e.dir || '…';
+  return [m.date, m.pilot, m.glider, e.dir].filter(Boolean).join(' · ') || '—';
+}
+function setMeta(e) {
+  if (!e.el) return;
+  const m = e.el.lastChild; m.textContent = metaLine(e);
+  if (e.jumps) { const w = document.createElement('span'); w.className = 'w'; w.textContent = `⚠ GPS跳点×${e.jumps} · `; m.prepend(w); }
+}
+function renderList() {
+  const el = $('#list'); const frag = document.createDocumentFragment();
+  S.view.forEach((e, i) => {
+    const d = document.createElement('div'); d.className = 'item' + (i === S.sel ? ' sel' : '') + (e.del ? ' del' : ''); d.dataset.i = i;
+    d.innerHTML = '<div class="n"></div><div class="m"></div>';
+    d.firstChild.textContent = e.name; d.title = e.path;
+    e.el = d; setMeta(e); frag.appendChild(d);
+  });
+  el.replaceChildren(frag);
+  $('#count').textContent = `${S.view.length}${S.view.length !== S.files.length ? ' / ' + S.files.length : ''} 个文件`;
+  if (S.sel >= 0) S.view[S.sel].el.scrollIntoView({ block: 'nearest' });
+  updDel();
+}
+
+/* ---------------- mark & delete ---------------- */
+const TRASH = '_已删除';
+const marksKey = () => 'igc.marks:' + S.rootLabel;
+function saveMarks() { try { localStorage.setItem(marksKey(), JSON.stringify(S.files.filter(e => e.del).map(e => e.path))); } catch {} }
+function loadMarks() { let a = []; try { a = JSON.parse(localStorage.getItem(marksKey()) || '[]'); } catch {} const s = new Set(a); for (const e of S.files) e.del = s.has(e.path); }
+function updDel() {
+  const n = S.files.filter(e => e.del).length, b = $('#btnDel');
+  b.textContent = `删除已标记 (${n})`; b.disabled = !n;
+  const e = S.view[S.sel], m = $('#btnMark');
+  m.hidden = !e; if (e) { m.classList.toggle('on', !!e.del); m.textContent = e.del ? '取消待删 (Del)' : '标记待删 (Del)'; }
+}
+function toggleMark(i, advance) {
+  const e = S.view[i]; if (!e) return;
+  e.del = !e.del; e.el.classList.toggle('del', e.del);
+  saveMarks(); updDel();
+  if (advance && e.del && i < S.view.length - 1) select(i + 1);
+}
+$('#btnMark').onclick = () => toggleMark(S.sel, false);
+$('#btnDel').onclick = () => {
+  const list = S.files.filter(e => e.del); if (!list.length) return;
+  const canWrite = S.root && list.every(e => e.parent);
+  $('#dlgTitle').textContent = `处理 ${list.length} 个标记为「待删」的文件`;
+  $('#dlgList').textContent = list.slice(0, 200).map(e => e.path).join('\n') + (list.length > 200 ? `\n… 还有 ${list.length - 200} 个` : '');
+  $('#dlgNote').textContent = canWrite
+    ? `「移到 ${TRASH}」会把文件移到「${S.rootLabel}\\${TRASH}」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。`
+    : '这些文件是用「打开文件」或拖入单个文件加载的，浏览器无权删除。请用「打开文件夹」（或把整个文件夹拖进来）重新打开后再删。';
+  $('#dlgMove').disabled = $('#dlgHard').disabled = !canWrite;
+  $('#dlg').showModal();
+};
+$('#dlgCancel').onclick = () => $('#dlg').close();
+$('#dlgMove').onclick = () => doDelete(true);
+$('#dlgHard').onclick = () => doDelete(false);
+async function uniqueName(dir, name) {
+  const dot = name.lastIndexOf('.'), base = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+  for (let k = 1; ; k++) {
+    const n = k === 1 ? name : `${base} (${k})${ext}`;
+    try { await dir.getFileHandle(n); } catch { return n; }
+  }
+}
+async function doDelete(move) {
+  $('#dlgMove').disabled = $('#dlgHard').disabled = true;
+  try {
+    if ((await S.root.requestPermission({ mode: 'readwrite' })) !== 'granted') { $('#dlg').close(); alert('没有获得写入权限，未删除任何文件。'); return; }
+  } catch (err) { $('#dlg').close(); alert('请求权限失败：' + err.message); return; }
+  const list = S.files.filter(e => e.del), fail = [];
+  let trash = null, done = 0;
+  if (move) { try { trash = await S.root.getDirectoryHandle(TRASH, { create: true }); } catch (err) { $('#dlg').close(); alert('无法创建 ' + TRASH + '：' + err.message); return; } }
+  for (const e of list) {
+    try {
+      if (move) {
+        const f = await e.h.getFile();
+        const nh = await trash.getFileHandle(await uniqueName(trash, e.name), { create: true });
+        const w = await nh.createWritable(); await w.write(f); await w.close();
+      }
+      await e.parent.removeEntry(e.name);
+      e.gone = true; S.cache.delete(e);
+    } catch (err) { fail.push(`${e.path}：${err.message}`); }
+    $('#dlgTitle').textContent = `处理中… ${++done} / ${list.length}`;
+  }
+  $('#dlg').close();
+  const oldSel = S.sel;
+  S.files = S.files.filter(e => !e.gone);
+  saveMarks(); applyView();
+  if (S.sel < 0 && S.view.length) select(Math.min(Math.max(0, oldSel), S.view.length - 1));
+  else if (!S.view.length) { S.track = null; line.setLatLngs([]); mStart.remove(); mEnd.remove(); jumpLayer.clearLayers(); $('#stats').textContent = ''; $('#path').textContent = '—'; drawProf(); showEmpty('文件夹里没有 .igc 文件了'); }
+  const ok = list.length - fail.length;
+  $('#count').textContent = `${move ? '已移到 ' + TRASH : '已永久删除'} ${ok} 个 · 剩 ${S.files.length} 个文件`;
+  if (fail.length) alert(`${fail.length} 个文件没删掉：\n` + fail.slice(0, 20).join('\n'));
+}
+// read just the head of each file in the background for date / pilot
+async function scanMeta() {
+  const tok = ++S.metaTok; const q = S.files.filter(e => !e.meta); let idx = 0, done = 0;
+  async function worker() {
+    while (idx < q.length && tok === S.metaTok) {
+      const e = q[idx++];
+      try {
+        const f = await entryFile(e);
+        const txt = decode(await f.slice(0, 4096).arrayBuffer());
+        const h = {}; for (const L of txt.split(/\r?\n/)) { if (L[0] === 'H') parseHeaderLine(L, h); else if (L[0] === 'B') break; }
+        e.meta = h; e.size = f.size;
+        setMeta(e);
+      } catch { e.meta = {}; }
+      if (++done % 200 === 0) await new Promise(r => setTimeout(r));
+    }
+  }
+  await Promise.all(Array.from({ length: 8 }, worker));
+  if (tok === S.metaTok && ($('#sort').value.includes('date') || $('#search').value)) applyView();
+}
+
+/* ---------------- loading & selection ---------------- */
+async function getTrack(e) {
+  if (S.cache.has(e)) { const tr = S.cache.get(e); S.cache.delete(e); S.cache.set(e, tr); return tr; }
+  const f = await entryFile(e);
+  const tr = parseIGC(decode(await f.arrayBuffer()));
+  tr.size = f.size;
+  if (!e.meta || !e.meta.date) e.meta = Object.assign({}, e.meta, tr.h);
+  e.jumps = tr.stats ? tr.stats.jumps.length : 0; setMeta(e);
+  S.cache.set(e, tr);
+  if (S.cache.size > CACHE_MAX) S.cache.delete(S.cache.keys().next().value);
+  return tr;
+}
+async function select(i) {
+  if (i < 0 || i >= S.view.length) return;
+  if (S.sel >= 0 && S.view[S.sel] && S.view[S.sel].el) S.view[S.sel].el.classList.remove('sel');
+  S.sel = i; const e = S.view[i];
+  e.el.classList.add('sel'); e.el.scrollIntoView({ block: 'nearest' }); updDel();
+  $('#path').textContent = (S.rootLabel ? S.rootLabel + '/' : '') + e.path;
+  const tok = ++S.loadTok;
+  let tr;
+  try { tr = await getTrack(e); } catch (err) { if (tok === S.loadTok) { showEmpty('读取失败：' + err.message); $('#stats').textContent = ''; } return; }
+  if (tok !== S.loadTok) return;
+  showTrack(tr);
+  // prefetch neighbours while idle
+  const idle = window.requestIdleCallback || (f => setTimeout(f, 50));
+  idle(() => { if (tok !== S.loadTok) return; [i + 1, i - 1].forEach(k => { const n = S.view[k]; if (n && !S.cache.has(n)) getTrack(n).catch(() => {}); }); });
+}
+
+/* ---------------- map ---------------- */
+const map = L.map('map', { preferCanvas: true, zoomSnap: 0.25, attributionControl: true }).setView([30, 105], 4);
+const ren = L.canvas({ padding: 0.3 });
+const tiles = {
+  'Esri 地形': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' }),
+  'Esri 卫星': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' }),
+  'OpenTopoMap': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap © OSM' }),
+  '无底图（最快）': L.layerGroup()
+};
+let baseName = 'Esri 地形'; try { const s = localStorage.getItem('igc.base'); if (s && tiles[s]) baseName = s; } catch {}
+tiles[baseName].addTo(map);
+L.control.layers(tiles, null, { collapsed: true }).addTo(map);
+map.on('baselayerchange', ev => { try { localStorage.setItem('igc.base', ev.name); } catch {} });
+L.control.scale({ imperial: false }).addTo(map);
+const line = L.polyline([], { renderer: ren, color: getComputedStyle(document.documentElement).getPropertyValue('--track').trim() || '#e11d48', weight: 2.5, opacity: .95, smoothFactor: 1.2 }).addTo(map);
+const mStart = L.circleMarker([0, 0], { renderer: ren, radius: 6, color: '#fff', weight: 2, fillColor: '#16a34a', fillOpacity: 1 }).bindTooltip('起飞');
+const mEnd = L.circleMarker([0, 0], { renderer: ren, radius: 6, color: '#fff', weight: 2, fillColor: '#dc2626', fillOpacity: 1 }).bindTooltip('降落');
+const jumpLayer = L.layerGroup().addTo(map);
+const mHover = L.circleMarker([0, 0], { renderer: ren, radius: 5, color: '#111', weight: 2, fillColor: '#facc15', fillOpacity: 1, interactive: false });
+
+function showEmpty(msg) {
+  const el = $('#empty');
+  if (msg) { el.innerHTML = ''; const b = document.createElement('b'); b.textContent = msg; el.appendChild(b); el.hidden = false; }
+  else el.hidden = true;
+}
+function fmtDur(s) { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return `${h}:${String(m).padStart(2, '0')}`; }
+function fmtTime(s, tz) { s = ((s + (tz || 0) * 3600) % 86400 + 86400) % 86400; return [s / 3600 | 0, (s % 3600) / 60 | 0, s % 60 | 0].map(x => String(x).padStart(2, '0')).join(':'); }
+function showTrack(tr) {
+  S.track = tr; S.hoverIdx = -1; mHover.remove(); jumpLayer.clearLayers();
+  const st = tr.stats, h = tr.h, tz = h.tz || 0, tzLbl = tz ? `UTC${tz > 0 ? '+' : ''}${tz}` : 'UTC';
+  const parts = [];
+  const add = (k, v) => parts.push(`<div><span>${k}</span> <b>${esc(v)}</b></div>`);
+  if (h.date) add('日期', h.date);
+  if (h.pilot) add('飞行员', h.pilot);
+  if (h.glider) add('机型', h.glider);
+  if (h.site) add('场地', h.site);
+  if (st && st.jumps.length) parts.push(`<div class="warn">⚠ GPS 跳点 ${st.jumps.length} 处（地图上橙色圈）</div>`);
+  if (st) {
+    add('时间', `${fmtTime(tr.t[0], tz)}–${fmtTime(tr.t[st.n - 1], tz)} ${tzLbl}`);
+    add('时长', fmtDur(st.dur));
+    add('航迹长', st.len.toFixed(1) + ' km');
+    add('离起飞点最远', st.maxD.toFixed(1) + ' km');
+    add('最高', Math.round(st.maxA) + ' m');
+    add('爬升', '+' + Math.round(st.gain) + ' m');
+    add('最大爬/沉', `${st.maxV.toFixed(1)} / ${st.minV.toFixed(1)} m/s`);
+    add('点数', st.n + `（${tr.altSrc}高度）`);
+  }
+  $('#stats').innerHTML = parts.join('');
+  if (!st) { line.setLatLngs([]); mStart.remove(); mEnd.remove(); showEmpty('这个文件里没有有效的 B 记录（航迹点）'); drawProf(); return; }
+  showEmpty();
+  const n = st.n, ll = new Array(n);
+  for (let k = 0; k < n; k++) ll[k] = [tr.lat[k], tr.lon[k]];
+  line.setLatLngs(ll);
+  mStart.setLatLng(ll[0]).addTo(map); mEnd.setLatLng(ll[n - 1]).addTo(map);
+  for (const k of st.jumps.slice(0, 300)) L.circleMarker(ll[k], { renderer: ren, radius: 8, color: '#f59e0b', weight: 3, fill: false }).bindTooltip(`GPS 跳点 ${fmtTime(tr.t[k], tz)}`).addTo(jumpLayer);
+  map.fitBounds(line.getBounds(), { padding: [24, 24], animate: false, maxZoom: 16 });
+  drawProf();
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+/* ---------------- altitude profile ---------------- */
+const cv = $('#prof'), cx = cv.getContext('2d');
+const PAD = { l: 44, r: 10, t: 10, b: 20 };
+function drawProf() {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, H);
+  const tr = S.track; if (!tr || !tr.stats) return;
+  const cs = getComputedStyle(document.documentElement);
+  const muted = cs.getPropertyValue('--muted'), lineC = cs.getPropertyValue('--line');
+  const { t, alt } = tr, n = t.length, t0 = t[0], t1 = t[n - 1] || t0 + 1;
+  let a0 = tr.stats.minA, a1 = tr.stats.maxA; const pad = Math.max(20, (a1 - a0) * 0.08); a0 -= pad; a1 += pad;
+  const pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b;
+  const X = s => PAD.l + (s - t0) / (t1 - t0 || 1) * pw, Y = a => PAD.t + (1 - (a - a0) / (a1 - a0 || 1)) * ph;
+  tr._X = X; tr._Y = Y; tr._pw = pw;
+  // grid
+  cx.font = '11px Segoe UI, Microsoft YaHei, sans-serif'; cx.fillStyle = muted; cx.strokeStyle = lineC; cx.lineWidth = 1;
+  const step = niceStep((a1 - a0) / 4);
+  cx.textAlign = 'right'; cx.textBaseline = 'middle';
+  for (let a = Math.ceil(a0 / step) * step; a <= a1; a += step) { const y = Math.round(Y(a)) + .5; cx.beginPath(); cx.moveTo(PAD.l, y); cx.lineTo(W - PAD.r, y); cx.stroke(); cx.fillText(a + ' m', PAD.l - 4, y); }
+  const tz = tr.h.tz || 0, tstep = niceTime((t1 - t0) / Math.max(2, pw / 90));
+  cx.textAlign = 'center'; cx.textBaseline = 'top';
+  for (let s = Math.ceil(t0 / tstep) * tstep; s <= t1; s += tstep) cx.fillText(fmtTime(s, tz).slice(0, 5), X(s), H - PAD.b + 4);
+  // area — decimate to one sample per pixel column (min/max) for speed
+  cx.beginPath(); cx.moveTo(X(t0), Y(alt[0]));
+  const per = Math.max(1, Math.floor(n / (pw * 2)));
+  for (let k = 0; k < n; k += per) cx.lineTo(X(t[k]), Y(alt[k]));
+  cx.lineTo(X(t1), Y(alt[n - 1]));
+  cx.strokeStyle = cs.getPropertyValue('--prof'); cx.lineWidth = 1.5; cx.stroke();
+  cx.lineTo(X(t1), PAD.t + ph); cx.lineTo(X(t0), PAD.t + ph); cx.closePath(); cx.fillStyle = cs.getPropertyValue('--proffill'); cx.fill();
+  if (S.hoverIdx >= 0) { const k = S.hoverIdx, x = Math.round(X(t[k])) + .5; cx.strokeStyle = muted; cx.beginPath(); cx.moveTo(x, PAD.t); cx.lineTo(x, PAD.t + ph); cx.stroke(); cx.fillStyle = '#facc15'; cx.beginPath(); cx.arc(X(t[k]), Y(alt[k]), 4, 0, 7); cx.fill(); }
+}
+function niceStep(x) { const p = 10 ** Math.floor(Math.log10(x || 1)), f = x / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+function niceTime(x) { for (const s of [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800]) if (s >= x) return s; return 21600; }
+function hoverAt(clientX) {
+  const tr = S.track; if (!tr || !tr.stats) return;
+  const r = cv.getBoundingClientRect(), { t } = tr, n = t.length;
+  const ts = t[0] + (clientX - r.left - PAD.l) / tr._pw * (t[n - 1] - t[0]);
+  let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (t[m] < ts) lo = m + 1; else hi = m; }
+  const k = Math.max(0, Math.min(n - 1, lo)); S.hoverIdx = k;
+  mHover.setLatLng([tr.lat[k], tr.lon[k]]).addTo(map);
+  let b = k; while (b > 0 && t[k] - t[b] < 10) b--;
+  const dt = t[k] - t[b], v = dt ? (tr.alt[k] - tr.alt[b]) / dt : 0, sp = dt ? dist(tr.lat[b], tr.lon[b], tr.lat[k], tr.lon[k]) / dt * 3600 : 0;
+  $('#tip').textContent = `${fmtTime(t[k], tr.h.tz)}  ·  ${tr.alt[k]} m  ·  ${v >= 0 ? '+' : ''}${v.toFixed(1)} m/s  ·  ${sp.toFixed(0)} km/h`;
+  drawProf();
+}
+cv.addEventListener('mousemove', e => hoverAt(e.clientX));
+cv.addEventListener('mouseleave', () => { S.hoverIdx = -1; mHover.remove(); $('#tip').textContent = ''; drawProf(); });
+cv.addEventListener('click', () => { if (S.hoverIdx >= 0) map.panTo(mHover.getLatLng()); });
+new ResizeObserver(() => { drawProf(); map.invalidateSize({ animate: false }); }).observe($('#main'));
+
+/* ---------------- opening files ---------------- */
+async function scanDir(dir, prefix, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'file') { if (/\.igc$/i.test(name)) out.push({ h, parent: dir, name, path: prefix + name, dir: prefix.replace(/\/$/, '') }); }
+    else if (!(prefix === '' && name === TRASH)) await scanDir(h, prefix + name + '/', out);
+    if (out.length % 500 === 0) $('#count').textContent = `扫描中… ${out.length}`;
+  }
+}
+async function openDirHandle(dh) {
+  $('#count').textContent = '扫描中…';
+  const out = []; await scanDir(dh, '', out);
+  addEntries(out, dh.name, dh);
+  idbSet('lastDir', dh).catch(() => {});
+}
+$('#btnDir').onclick = async () => {
+  if (window.showDirectoryPicker) {
+    try { await openDirHandle(await showDirectoryPicker({ id: 'igc', mode: 'read' })); } catch (e) { if (e.name !== 'AbortError') alert(e.message); }
+  } else $('#dirInput').click();
+};
+$('#btnFiles').onclick = () => $('#fileInput').click();
+function fromFileList(fl) {
+  const out = [];
+  for (const f of fl) if (/\.igc$/i.test(f.name)) { const p = f.webkitRelativePath || f.name; const parts = p.split('/'); const root = f.webkitRelativePath ? parts.shift() : ''; out.push({ file: f, name: f.name, path: parts.join('/'), dir: parts.slice(0, -1).join('/'), root }); }
+  return out;
+}
+$('#fileInput').onchange = e => { addEntries(fromFileList(e.target.files)); e.target.value = ''; };
+$('#dirInput').onchange = e => { const l = fromFileList(e.target.files); addEntries(l, l[0] && l[0].root); e.target.value = ''; };
+$('#btnLast').onclick = async () => {
+  const dh = await idbGet('lastDir').catch(() => null); if (!dh) return;
+  try { if ((await dh.requestPermission({ mode: 'read' })) === 'granted') await openDirHandle(dh); } catch (e) { alert('无法打开上次的文件夹：' + e.message); }
+};
+// drag & drop (files or folders)
+let dragN = 0;
+addEventListener('dragenter', e => { e.preventDefault(); if (++dragN === 1) document.body.classList.add('drag'); });
+addEventListener('dragleave', () => { if (--dragN <= 0) { dragN = 0; document.body.classList.remove('drag'); } });
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', async e => {
+  e.preventDefault(); dragN = 0; document.body.classList.remove('drag');
+  const items = [...e.dataTransfer.items].filter(i => i.kind === 'file');
+  const handles = await Promise.all(items.map(i => i.getAsFileSystemHandle ? i.getAsFileSystemHandle().catch(() => null) : null));
+  if (handles.length === 1 && handles[0] && handles[0].kind === 'directory') return openDirHandle(handles[0]);
+  const entries = items.map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  const out = [];
+  async function walk(en, prefix) {
+    if (en.isFile) { if (/\.igc$/i.test(en.name)) { const f = await new Promise((r, j) => en.file(r, j)); out.push({ file: f, name: en.name, path: prefix + en.name, dir: prefix.replace(/\/$/, '') }); } }
+    else { const rd = en.createReader(); let batch; do { batch = await new Promise((r, j) => rd.readEntries(r, j)); for (const c of batch) await walk(c, prefix + en.name + '/'); } while (batch.length); }
+  }
+  if (entries.length) { for (const en of entries) await walk(en, ''); addEntries(out); }
+  else addEntries(fromFileList(e.dataTransfer.files));
+});
+
+/* ---------------- list interaction ---------------- */
+$('#list').addEventListener('click', e => { const it = e.target.closest('.item'); if (it) select(+it.dataset.i); });
+let searchT; $('#search').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(applyView, 80); });
+$('#sort').addEventListener('change', () => { applyView(); try { localStorage.setItem('igc.sort', $('#sort').value); } catch {} });
+try { const s = localStorage.getItem('igc.sort'); if (s) $('#sort').value = s; } catch {}
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT' || $('#dlg').open) return;
+  if ((e.key === 'Delete' || e.key === 'd' || e.key === 'D') && e.target.id !== 'search' && !e.ctrlKey) { e.preventDefault(); toggleMark(S.sel, true); return; }
+  if (e.target.id === 'search' && !['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) return;
+  const page = Math.max(1, Math.floor($('#list').clientHeight / 46) - 1);
+  const k = { ArrowDown: 1, ArrowUp: -1, PageDown: page, PageUp: -page, j: 1, k: -1 }[e.key];
+  if (k) { e.preventDefault(); select(Math.max(0, Math.min(S.view.length - 1, (S.sel < 0 ? 0 : S.sel + k)))); }
+  else if (e.key === 'Home' && e.target.id !== 'search') { e.preventDefault(); select(0); }
+  else if (e.key === 'End' && e.target.id !== 'search') { e.preventDefault(); select(S.view.length - 1); }
+  else if (e.key === 'f' && e.ctrlKey) { e.preventDefault(); $('#search').focus(); }
+});
+// resizable sidebar
+$('#split').addEventListener('pointerdown', e => {
+  e.preventDefault(); const mv = ev => { const w = Math.max(200, Math.min(innerWidth - 300, ev.clientX)); document.body.style.setProperty('--sidew', w + 'px'); };
+  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); map.invalidateSize(); try { localStorage.setItem('igc.sidew', document.body.style.getPropertyValue('--sidew')); } catch {} };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up);
+});
+try { const w = localStorage.getItem('igc.sidew'); if (w) document.body.style.setProperty('--sidew', w); } catch {}
+
+/* ---------------- tiny IndexedDB (remember last folder) ---------------- */
+function idb() { return new Promise((r, j) => { const q = indexedDB.open('igc-viewer', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); }); }
+async function idbSet(k, v) { const db = await idb(); return new Promise((r, j) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = r; tx.onerror = () => j(tx.error); }); }
+async function idbGet(k) { const db = await idb(); return new Promise((r, j) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); }); }
+if (window.showDirectoryPicker) idbGet('lastDir').then(dh => { if (dh) { const b = $('#btnLast'); b.hidden = false; b.title = '重新打开：' + dh.name; b.textContent = '上次：' + dh.name; } }).catch(() => {});
+
+window.IGCViewer = { addEntries, parseIGC }; // for testing
+</script>
+</body>
+</html>
