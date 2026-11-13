@@ -1,5 +1,7 @@
 # IGC Viewer
 
+**简体中文** · [繁體中文](README.zh-Hant.md)
+
 一个**单文件、双击即用**的 IGC 飞行记录查看器，用来快速浏览、筛选和清理滑翔伞（台湾称飛行傘）/ 滑翔机的 `.igc` 航迹文件。
 
 A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding). Open a folder, flip through flights with the arrow keys, spot GPS glitches, and clean out bad files.
@@ -23,7 +25,7 @@ A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding
 - **GPS 跳点检测**：自动找出定位漂移的点，地图上用橙色圈标出，列表里也会提示。
 - **标记 & 清理**：按 <kbd>Del</kbd> / <kbd>D</kbd> 标记「待删」并跳到下一个，然后一键「移到 `_已删除` 文件夹（可恢复）」或永久删除。
 - **筛选排序**：按文件名、日期、飞行员筛选；按名称或日期排序。
-- **简体 / 繁體**：右上角切换；繁體中文系统（台湾、香港、澳门）自动用繁體，用语按台湾习惯（檔案、資料夾…）。文件名、飞行员名等你自己的数据保持原样。
+- **简体 / 繁體**：在左上角按钮那一排切换；繁體中文系统（台湾、香港、澳门）自动用繁體，用语按台湾习惯（檔案、資料夾…）。文件名、飞行员名等你自己的数据保持原样。
 - 底图可切换：Esri 地形 / Esri 卫星 / OpenTopoMap / 无底图。
 
 | 快捷键 | 作用 |
@@ -43,7 +45,7 @@ A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding
 python3 build.py   # 生成 IGC-Viewer.html
 ```
 
-改了界面文字后，先重新生成繁體对照表 `src/zh-Hant.json`（需要 OpenCC）。`build.py` 发现有文字没有繁體时会提示：
+改了界面文字或本 README 后，运行下面的命令重新生成繁體对照表 `src/zh-Hant.json` 和 [`README.zh-Hant.md`](README.zh-Hant.md)（需要 OpenCC，不要直接改繁體 README）。`build.py` 发现有界面文字没有繁體时会提示：
 
 ```bash
 pip install opencc && python3 tools/gen_hant.py
