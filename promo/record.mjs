@@ -1,4 +1,4 @@
-// 录制宣传片：node record.mjs [github-url]
+// 录制宣传片：node record.mjs [github-url] [hans|hant]   （hant = 繁體版）
 // 用本机 Chrome 无头打开 IGC-Viewer.html，按脚本操作，CDP screencast 抓帧，ffmpeg 合成 out/promo.mp4
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -7,9 +7,10 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = path.join(here, 'out'), frames = path.join(out, 'frames');
 const url = process.argv[2] || 'github.com/igc-viewer';
-fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(frames, { recursive: true });
+const lang = process.argv[3] === 'hant' ? 'hant' : 'hans';
+const out = path.join(here, 'out'), frames = path.join(out, 'frames-' + lang);
+fs.rmSync(frames, { recursive: true, force: true }); fs.mkdirSync(frames, { recursive: true });
 
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--window-size=1280,807', '--force-device-scale-factor=1.5'] });
@@ -18,7 +19,7 @@ await page.addInitScript({ path: path.join(here, 'demo-init.js') });
 await page.goto(pathToFileURL(path.join(here, '..', 'IGC-Viewer.html')).href);
 const vp = await page.evaluate(() => [innerWidth, innerHeight, devicePixelRatio]);
 if (vp.join() !== '1280,720,1.5') throw new Error('unexpected viewport ' + vp + ' — tweak --window-size');
-await page.evaluate(() => { pv.card('title'); pv.cursor(false); });
+await page.evaluate(l => { setLang(l); pv.card('title'); pv.cursor(false); }, lang);
 // warm map tiles for the demo area so the recording doesn't show grey squares
 const nFlights = await page.evaluate(async () => {
   const root = await showDirectoryPicker(), y = await root.getDirectoryHandle('2025'); window.__warm = [];
@@ -92,8 +93,8 @@ for (let i = 0; i < shots.length; i++) {
   lines.push(`file '${shots[i].file}'`, `duration ${Math.max(0.001, d).toFixed(4)}`);
 }
 lines.push(`file '${shots.at(-1).file}'`);
-fs.writeFileSync(path.join(out, 'frames.txt'), lines.join('\n'));
-const mp4 = path.join(out, 'promo.mp4');
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-safe', '0', '-f', 'concat', '-i', path.join(out, 'frames.txt'),
+fs.writeFileSync(path.join(out, `frames-${lang}.txt`), lines.join('\n'));
+const mp4 = path.join(out, `promo-${lang}.mp4`);
+execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-safe', '0', '-f', 'concat', '-i', path.join(out, `frames-${lang}.txt`),
   '-vf', 'fps=30,scale=1920:1080:flags=lanczos,format=yuv420p', '-c:v', 'libx264', '-crf', '18', '-preset', 'slow', '-movflags', '+faststart', mp4], { stdio: 'inherit' });
 console.log('frames', shots.length, '->', mp4);

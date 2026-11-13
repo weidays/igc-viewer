@@ -680,6 +680,7 @@ button{cursor:pointer;white-space:nowrap}
 button:hover{border-color:var(--acc)}
 button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
 #search{flex:1;min-width:0}
+#lang{margin-left:auto;padding:5px 4px}
 #count{color:var(--muted);font-size:12px}
 #list{flex:1;overflow:auto;outline:none}
 .item{padding:6px 10px 6px 12px;border-bottom:1px solid var(--line);cursor:pointer;overflow:hidden}
@@ -688,7 +689,7 @@ button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
 .item:hover{background:var(--bg)}
 .item.sel{background:var(--selbg);box-shadow:inset 3px 0 var(--acc)}
 .item.del .n{text-decoration:line-through;color:#dc2626}
-.item.del .n::before{content:"待删 ";text-decoration:none;display:inline-block;margin-right:4px;font-size:11px;font-weight:600;color:#fff;background:#dc2626;border-radius:3px;padding:0 4px}
+.item.del .n::before{content:var(--t-del,"待删 ");text-decoration:none;display:inline-block;margin-right:4px;font-size:11px;font-weight:600;color:#fff;background:#dc2626;border-radius:3px;padding:0 4px}
 .item .w{color:#d97706}
 #delrow{display:flex;gap:6px;align-items:center}
 #delrow #count{flex:1}
@@ -719,12 +720,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);z-index:500;pointer-events:none;text-align:center;padding:20px}
 #empty[hidden]{display:none}
 .leaflet-control-layers-toggle{background-image:none!important;width:auto!important;height:auto!important;padding:5px 9px;font-size:12px;color:#333;text-decoration:none}
-.leaflet-control-layers-toggle::after{content:"底图"}
+.leaflet-control-layers-toggle::after{content:var(--t-base,"底图")}
 .leaflet-control-layers-expanded .leaflet-control-layers-toggle{display:none}
 #empty b{color:var(--text);font-size:15px}
 #mapbox{position:relative;min-height:0}
 #mapbox #map{position:absolute;inset:0}
-body.drag #mapbox::after{content:"松开以加载 IGC 文件 / 文件夹";position:absolute;inset:10px;border:3px dashed var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(37,99,235,.08);z-index:1000}
+body.drag #mapbox::after{content:var(--t-drop,"松开以加载 IGC 文件 / 文件夹");position:absolute;inset:10px;border:3px dashed var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(37,99,235,.08);z-index:1000}
 .leaflet-container{font:inherit}
 kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-size:11px}
 </style>
@@ -736,6 +737,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
       <button id="btnDir" class="primary" title="选择文件夹（会递归扫描子文件夹）">打开文件夹</button>
       <button id="btnFiles" title="选择一个或多个 .igc 文件">打开文件</button>
       <button id="btnLast" hidden title="重新打开上次的文件夹">上次文件夹</button>
+      <select id="lang" translate="no" title="简体 / 繁體"><option value="hans">简体</option><option value="hant">繁體</option></select>
     </div>
     <div class="row">
       <input id="search" type="search" placeholder="筛选文件名 / 日期 / 飞行员…">
@@ -759,7 +761,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
 <div id="split"></div>
 <main id="main">
   <div id="info">
-    <div id="pathrow"><div id="path">—</div><button id="btnMark" hidden>标记待删 (Del)</button></div>
+    <div id="pathrow"><div id="path" translate="no">—</div><button id="btnMark" hidden>标记待删 (Del)</button></div>
     <div id="stats"></div>
   </div>
   <div id="mapbox">
@@ -770,7 +772,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
 </main>
 <dialog id="dlg">
   <b id="dlgTitle"></b>
-  <div id="dlgList"></div>
+  <div id="dlgList" translate="no"></div>
   <div id="dlgNote" style="color:var(--muted);font-size:12px;margin-bottom:12px"></div>
   <div class="row">
     <button id="dlgCancel">取消</button>
@@ -908,7 +910,7 @@ function renderList() {
   const el = $('#list'); const frag = document.createDocumentFragment();
   S.view.forEach((e, i) => {
     const d = document.createElement('div'); d.className = 'item' + (i === S.sel ? ' sel' : '') + (e.del ? ' del' : ''); d.dataset.i = i;
-    d.innerHTML = '<div class="n"></div><div class="m"></div>';
+    d.innerHTML = '<div class="n" translate="no"></div><div class="m"></div>';
     d.firstChild.textContent = e.name; d.title = e.path;
     e.el = d; setMeta(e); frag.appendChild(d);
   });
@@ -919,7 +921,8 @@ function renderList() {
 }
 
 /* ---------------- mark & delete ---------------- */
-const TRASH = '_已删除';
+const TRASH_NAMES = ['_已删除', '_已刪除'];
+const trashName = () => I18N.conv('_已删除');
 const marksKey = () => 'igc.marks:' + S.rootLabel;
 function saveMarks() { try { localStorage.setItem(marksKey(), JSON.stringify(S.files.filter(e => e.del).map(e => e.path))); } catch {} }
 function loadMarks() { let a = []; try { a = JSON.parse(localStorage.getItem(marksKey()) || '[]'); } catch {} const s = new Set(a); for (const e of S.files) e.del = s.has(e.path); }
@@ -942,7 +945,7 @@ $('#btnDel').onclick = () => {
   $('#dlgTitle').textContent = `处理 ${list.length} 个标记为「待删」的文件`;
   $('#dlgList').textContent = list.slice(0, 200).map(e => e.path).join('\n') + (list.length > 200 ? `\n… 还有 ${list.length - 200} 个` : '');
   $('#dlgNote').textContent = canWrite
-    ? `「移到 ${TRASH}」会把文件移到「${S.rootLabel}\\${TRASH}」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。`
+    ? `「移到 ${trashName()}」会把文件移到「${S.rootLabel}\\${trashName()}」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。`
     : '这些文件是用「打开文件」或拖入单个文件加载的，浏览器无权删除。请用「打开文件夹」（或把整个文件夹拖进来）重新打开后再删。';
   $('#dlgMove').disabled = $('#dlgHard').disabled = !canWrite;
   $('#dlg').showModal();
@@ -964,7 +967,7 @@ async function doDelete(move) {
   } catch (err) { $('#dlg').close(); alert('请求权限失败：' + err.message); return; }
   const list = S.files.filter(e => e.del), fail = [];
   let trash = null, done = 0;
-  if (move) { try { trash = await S.root.getDirectoryHandle(TRASH, { create: true }); } catch (err) { $('#dlg').close(); alert('无法创建 ' + TRASH + '：' + err.message); return; } }
+  if (move) { try { trash = await S.root.getDirectoryHandle(trashName(), { create: true }); } catch (err) { $('#dlg').close(); alert('无法创建 ' + trashName() + '：' + err.message); return; } }
   for (const e of list) {
     try {
       if (move) {
@@ -984,7 +987,7 @@ async function doDelete(move) {
   if (S.sel < 0 && S.view.length) select(Math.min(Math.max(0, oldSel), S.view.length - 1));
   else if (!S.view.length) { S.track = null; line.setLatLngs([]); mStart.remove(); mEnd.remove(); jumpLayer.clearLayers(); $('#stats').textContent = ''; $('#path').textContent = '—'; drawProf(); showEmpty('文件夹里没有 .igc 文件了'); }
   const ok = list.length - fail.length;
-  $('#count').textContent = `${move ? '已移到 ' + TRASH : '已永久删除'} ${ok} 个 · 剩 ${S.files.length} 个文件`;
+  $('#count').textContent = `${move ? '已移到 ' + trashName() : '已永久删除'} ${ok} 个 · 剩 ${S.files.length} 个文件`;
   if (fail.length) alert(`${fail.length} 个文件没删掉：\n` + fail.slice(0, 20).join('\n'));
 }
 // read just the head of each file in the background for date / pilot
@@ -1150,7 +1153,7 @@ new ResizeObserver(() => { drawProf(); map.invalidateSize({ animate: false }); }
 async function scanDir(dir, prefix, out) {
   for await (const [name, h] of dir.entries()) {
     if (h.kind === 'file') { if (/\.igc$/i.test(name)) out.push({ h, parent: dir, name, path: prefix + name, dir: prefix.replace(/\/$/, '') }); }
-    else if (!(prefix === '' && name === TRASH)) await scanDir(h, prefix + name + '/', out);
+    else if (!(prefix === '' && TRASH_NAMES.includes(name))) await scanDir(h, prefix + name + '/', out);
     if (out.length % 500 === 0) $('#count').textContent = `扫描中… ${out.length}`;
   }
 }
@@ -1226,6 +1229,55 @@ function idb() { return new Promise((r, j) => { const q = indexedDB.open('igc-vi
 async function idbSet(k, v) { const db = await idb(); return new Promise((r, j) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = r; tx.onerror = () => j(tx.error); }); }
 async function idbGet(k) { const db = await idb(); return new Promise((r, j) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); }); }
 if (window.showDirectoryPicker) idbGet('lastDir').then(dh => { if (dh) { const b = $('#btnLast'); b.hidden = false; b.title = '重新打开：' + dh.name; b.textContent = '上次：' + dh.name; } }).catch(() => {});
+
+/* ---------------- 简体 / 繁體 ---------------- */
+// 繁體对照表由 tools/gen_hant.py（OpenCC s2twp）生成，build.py 内联到这里
+const HANT = {"」会把文件移到「":"」會把檔案移到「","」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。":"」，確認沒問題後再在檔案總管裡刪掉那個資料夾。「永久刪除」不進回收站，無法恢復。瀏覽器會先詢問一次寫入權限，點「允許」。","一键清理，先移到「":"一鍵清理，先移到「","上次文件夹":"上次資料夾","个":"個","个文件":"個檔案","个文件没删掉：":"個檔案沒刪掉：","个标记为「待删」的文件":"個標記為「待刪」的檔案","免费":"免費","内联到这里":"內聯到這裡","切换":"切換","删除已标记":"刪除已標記","单个":"單個","卫星":"衛星","双击即用":"雙擊即用","取消待删":"取消待刪","名称":"名稱","后台预读相邻文件，不用等":"後臺預讀相鄰檔案，不用等","场地":"場地","处理":"處理","处理中":"處理中","处理所有标了「待删」的文件":"處理所有標了「待刪」的檔案","处（地图上橙色圈）":"處（地圖上橙色圈）","子文件夹也会一起扫描":"子資料夾也會一起掃描","已删除":"已刪除","已删除」可恢复":"已刪除」可恢復","已删除」文件夹（可恢复）":"已刪除」資料夾（可恢復）","已永久删除":"已永久刪除","底图":"底圖","开源":"開源","录制宣传片：":"錄製宣傳片：","待删":"待刪","或把文件":"或把檔案","打开一个包含":"開啟一個包含","打开文件":"開啟檔案","打开文件夹":"開啟資料夾","打开文件夹，自动找出所有":"開啟資料夾，自動找出所有","扫描中":"掃描中","抓帧，":"抓幀，","文件":"檔案","文件了":"檔案了","文件夹":"資料夾","文件夹直接拖进来":"資料夾直接拖進來","文件夹里没有":"資料夾裡沒有","无":"無","无头打开":"無頭開啟","无底图（最快）":"無底圖（最快）","无法创建":"無法建立","无法打开上次的文件夹：":"無法開啟上次的資料夾：","旧":"舊","时长":"時長","时间":"時間","未加载文件":"未載入檔案","机型":"機型","松开以加载":"鬆開以載入","极速预览":"極速預覽","标记废记录，自动跳到下一个":"標記廢記錄，自動跳到下一個","标记待删":"標記待刪","标记待删并跳到下一个":"標記待刪並跳到下一個","气压":"氣壓","永久删除":"永久刪除","没有获得写入权限，未删除任何文件。":"沒有獲得寫入權限，未刪除任何檔案。","滑翔伞":"滑翔傘","滑翔机飞行记录，一眼看完":"滑翔機飛行記錄，一眼看完","点数":"點數","用本机":"用本機","的文件夹":"的資料夾","离起飞点最远":"離起飛點最遠","秒切换，航迹立刻出来":"秒切換，航跡立刻出來","筛选文件名":"篩選檔名","简体":"簡體","繁體对照表由":"繁體對照表由","自动标出":"自動標出","航迹长":"航跡長","记录（航迹点）":"記錄（航跡點）","请求权限失败：":"請求權限失敗：","读取失败：":"讀取失敗：","起飞":"起飛","跳点":"跳點","跳点：单步":"跳點：單步","还有":"還有","这个文件里没有有效的":"這個檔案裡沒有有效的","这些文件是用「打开文件」或拖入单个文件加载的，浏览器无权删除。请用「打开文件夹」（或把整个文件夹拖进来）重新打开后再删。":"這些檔案是用「開啟檔案」或拖入單個檔案載入的，瀏覽器無權刪除。請用「開啟資料夾」（或把整個資料夾拖進來）重新開啟後再刪。","这里没有找到":"這裡沒有找到","选择一个或多个":"選擇一個或多個","选择文件夹（会递归扫描子文件夹）":"選擇資料夾（會遞迴掃描子資料夾）","重新打开上次的文件夹":"重新開啟上次的資料夾","重新打开：":"重新開啟：","飞行员":"飛行員","飞行记录":"飛行記錄","高度曲线与地图联动":"高度曲線與地圖聯動","鿿豈":"鿿豈","，或单步高度变化":"，或單步高度變化","，按脚本操作，":"，按指令碼操作，"};
+const I18N = { hant: false, re: /[　-〿㐀-鿿豈-﫿＀-￯]+/g,
+  conv(s) { return this.hant && s ? String(s).replace(this.re, r => HANT[r] || r) : s; } };
+const i18nOrig = new WeakMap(), i18nMine = new WeakMap(), i18nAO = new WeakMap(), i18nAM = new WeakMap();
+const I18N_ATTRS = ['title', 'placeholder', 'aria-label'];
+const i18nSkip = n => { const el = n.nodeType === 1 ? n : n.parentElement; return !el || !!el.closest('[translate="no"],script,style'); };
+function i18nText(n) {
+  if (i18nSkip(n)) return;
+  if (i18nMine.get(n) !== n.data) i18nOrig.set(n, n.data); // the app wrote new text → that is the new original
+  const v = I18N.conv(i18nOrig.get(n));
+  if (n.data !== v) n.data = v;
+  i18nMine.set(n, v);
+}
+function i18nAttr(el, a) {
+  if (!el.hasAttribute(a) || i18nSkip(el)) return;
+  const o = i18nAO.get(el) || {}, m = i18nAM.get(el) || {}, cur = el.getAttribute(a);
+  if (m[a] !== cur) o[a] = cur;
+  const v = I18N.conv(o[a]); if (cur !== v) el.setAttribute(a, v);
+  m[a] = v; i18nAO.set(el, o); i18nAM.set(el, m);
+}
+function i18nTree(root) {
+  if (root.nodeType === 3) return i18nText(root);
+  if (root.nodeType !== 1 || i18nSkip(root)) return;
+  for (const a of I18N_ATTRS) i18nAttr(root, a);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, { acceptNode: n => n.nodeType === 1 && (n.getAttribute('translate') === 'no' || n.tagName === 'SCRIPT' || n.tagName === 'STYLE') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  for (let n = w.nextNode(); n; n = w.nextNode()) { if (n.nodeType === 3) i18nText(n); else for (const a of I18N_ATTRS) i18nAttr(n, a); }
+}
+const i18nObs = new MutationObserver(recs => { for (const r of recs) { if (r.type === 'characterData') i18nText(r.target); else if (r.type === 'attributes') i18nAttr(r.target, r.attributeName); else r.addedNodes.forEach(i18nTree); } });
+function setLang(l) {
+  I18N.hant = l === 'hant';
+  document.documentElement.lang = I18N.hant ? 'zh-Hant' : 'zh-CN';
+  $('#lang').value = I18N.hant ? 'hant' : 'hans';
+  for (const [k, v] of [['--t-del', '待删 '], ['--t-base', '底图'], ['--t-drop', '松开以加载 IGC 文件 / 文件夹']]) document.documentElement.style.setProperty(k, JSON.stringify(I18N.conv(v)));
+  i18nObs.disconnect();
+  i18nTree(document.body);
+  // only watch for new text while 繁體 is on — 简体 costs nothing
+  if (I18N.hant) i18nObs.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
+  try { localStorage.setItem('igc.lang', $('#lang').value); } catch {}
+}
+{ const _alert = window.alert.bind(window); window.alert = m => _alert(I18N.conv(m)); }
+$('#lang').addEventListener('change', e => setLang(e.target.value));
+{
+  let l = null; try { l = localStorage.getItem('igc.lang'); } catch {}
+  if (!l) { const z = (navigator.languages || [navigator.language]).find(x => /^zh/i.test(x)) || ''; l = /^zh-(tw|hk|mo|hant)/i.test(z) ? 'hant' : 'hans'; }
+  setLang(l);
+}
 
 window.IGCViewer = { addEntries, parseIGC }; // for testing
 </script>

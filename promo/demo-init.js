@@ -43,7 +43,7 @@
   class DH { constructor(name) { this.kind = 'directory'; this.name = name; this.c = new Map(); } async *entries() { for (const e of [...this.c]) yield e; } async getFileHandle(n, o) { if (this.c.has(n)) return this.c.get(n); if (o && o.create) { const f = new FH(n, ''); this.c.set(n, f); return f; } throw new DOMException('nf', 'NotFoundError'); } async getDirectoryHandle(n, o) { if (!this.c.has(n) && o && o.create) this.c.set(n, new DH(n)); if (!this.c.has(n)) throw new DOMException('nf', 'NotFoundError'); return this.c.get(n); } async removeEntry(n) { this.c.delete(n); } async requestPermission() { return 'granted'; } }
   const root = new DH('飞行记录'), y = new DH('2025'); root.c.set('2025', y);
   for (const [n, o] of specs) y.c.set(n, new FH(n, flight({ ...base, ...o })));
-  window.showDirectoryPicker = async () => root;
+  window.showDirectoryPicker = async () => { root.name = typeof I18N !== 'undefined' && I18N.hant ? '飛行記錄' : '飞行记录'; return root; };
 
   /* ---------- overlays ---------- */
   const css = `
