@@ -10,7 +10,7 @@ SOURCES = ['src/template.html', 'promo/demo-init.js', 'promo/record.mjs']
 RUN = re.compile('[　-〿㐀-鿿豈-﫿＀-￯]+')
 
 # OpenCC 之后再按台湾 Windows 用户习惯修正
-FIXES = {'資源管理器': '檔案總管', '許可權': '權限'}
+FIXES = {'資源管理器': '檔案總管', '許可權': '權限', '滑翔傘': '飛行傘', '後臺': '背景', '回收站': '資源回收筒'}
 
 def runs(paths):
     out = set()

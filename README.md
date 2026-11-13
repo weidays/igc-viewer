@@ -1,6 +1,6 @@
 # IGC Viewer
 
-一个**单文件、双击即用**的 IGC 飞行记录查看器，用来快速浏览、筛选和清理滑翔伞 / 滑翔机的 `.igc` 航迹文件。
+一个**单文件、双击即用**的 IGC 飞行记录查看器，用来快速浏览、筛选和清理滑翔伞（台湾称飛行傘）/ 滑翔机的 `.igc` 航迹文件。
 
 A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding). Open a folder, flip through flights with the arrow keys, spot GPS glitches, and clean out bad files.
 
