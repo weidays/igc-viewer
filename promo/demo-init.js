@@ -25,9 +25,9 @@
     for (let s = 0; s < 240; s++) { move((r() - .5) * .4, (r() - .5) * .4); t++; push(); }
     // forgot to stop the logger: shuttle back up a switchback road
     if (o.shuttle) {
-      let h = r() * 6, left = 0, turn = 1;
+      let h = 3.6, left = 0, turn = 1;
       for (let s = 0; s < o.shuttle; s++) {
-        if (left <= 0) { left = 150 + r() * 400; for (let j = 0; j < 10; j++) { h += turn * Math.PI / 10; move(Math.sin(h) * 3, Math.cos(h) * 3); alt += .2; t++; push(); } turn = -turn; }
+        if (left <= 0) { left = 150 + r() * 400; for (let j = 0; j < 10; j++) { h += turn * Math.PI * .55 / 10; move(Math.sin(h) * 3, Math.cos(h) * 3); alt += .2; t++; push(); } turn = -turn; }
         const v = 8.5 * (0.7 + r() * .5); left -= v; h += (r() - .5) * .06; move(Math.sin(h) * v, Math.cos(h) * v); alt += v * .065; t++; push();
       }
     }
