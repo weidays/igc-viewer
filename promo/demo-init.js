@@ -20,6 +20,17 @@
       const floor = 1250 + r() * 1100;
       for (let s = 0; alt > floor; s++) { head += (r() - .5) * .03; move(Math.sin(head) * 9.5 + Math.sin(wd) * ws, Math.cos(head) * 9.5 + Math.cos(wd) * ws); alt -= 1.5 + (r() - .5) * 1.2; t++; push(); }
     }
+    // final glide to the landing field
+    while (alt > o.ground) { head += (r() - .5) * .03; move(Math.sin(head) * 9 + Math.sin(wd) * ws, Math.cos(head) * 9 + Math.cos(wd) * ws); alt -= 1.5; t++; push(); }
+    for (let s = 0; s < 240; s++) { move((r() - .5) * .4, (r() - .5) * .4); t++; push(); }
+    // forgot to stop the logger: shuttle back up a switchback road
+    if (o.shuttle) {
+      let h = r() * 6, left = 0, turn = 1;
+      for (let s = 0; s < o.shuttle; s++) {
+        if (left <= 0) { left = 150 + r() * 400; for (let j = 0; j < 10; j++) { h += turn * Math.PI / 10; move(Math.sin(h) * 3, Math.cos(h) * 3); alt += .2; t++; push(); } turn = -turn; }
+        const v = 8.5 * (0.7 + r() * .5); left -= v; h += (r() - .5) * .06; move(Math.sin(h) * v, Math.cos(h) * v); alt += v * .065; t++; push();
+      }
+    }
     if (o.jumps) for (let k = 0; k < o.jumps; k++) { const i = 200 + Math.floor(r() * (fx.length - 400)), n = 1 + Math.floor(r() * 3); for (let j = 0; j < n; j++) { fx[i + j][1] += .06 + r() * .04; fx[i + j][2] -= .05 * r(); fx[i + j][3] += 400; } }
     const dm = (v, w, h) => { const s = v >= 0 ? h[0] : h[1]; v = Math.abs(v); const d = Math.floor(v), m = Math.round((v - d) * 60000); return String(d).padStart(w, '0') + String(m).padStart(5, '0') + s; };
     const p2 = x => String(x).padStart(2, '0');
@@ -35,7 +46,7 @@
     ['2025-06-07 XC.igc', { seed: 41, every: 3, tp: 2.1, date: '070625', head: 1.4, legs: 10, glider: 'Ozone Rush 6' }],
     ['2025-06-21 XC.igc', { seed: 58, every: 2, tp: 3.0, date: '210625', head: 3.4, legs: 6, glider: 'Ozone Rush 6', jumps: 2 }],
     ['2025-07-02 XC.igc', { seed: 66, every: 99, tp: 0, date: '020725', head: 0.2, legs: 5, glider: 'Ozone Rush 6', jumps: 3 }],
-    ['2025-07-15 XC.igc', { seed: 77, every: 3, tp: -2.1, date: '150725', head: 4.4, legs: 9, glider: 'Ozone Rush 6' }],
+    ['2025-07-15 XC.igc', { seed: 77, every: 3, tp: -2.1, date: '150725', head: 4.4, legs: 6, glider: 'Ozone Rush 6', shuttle: 1300 }],
     ['2025-08-09 XC.igc', { seed: 90, every: 4, tp: 2.6, date: '090825', head: 2.7, legs: 8, glider: 'Ozone Rush 6' }],
     ['2025-09-01 XC.igc', { seed: 101, every: 3, tp: 2.1, date: '010925', head: 1.9, legs: 10, glider: 'Ozone Rush 6' }],
   ];

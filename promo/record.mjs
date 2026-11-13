@@ -68,18 +68,25 @@ await glide(pb.x + 80, pb.y + pb.height / 2, 600);
 await glide(pb.x + pb.width - 40, pb.y + pb.height / 2, 3200);
 await W(400);
 await glide(640, 330, 500);
-// 5. GPS jumps
+// 5. suspicious-only filter
+await cap('⚠ 可疑：只看有问题的记录', '打开文件夹后在后台逐个检查');
+await click('#btnSus'); await W(1700);
+await glide(640, 330, 500);
+// 6. GPS jumps → mark
 await cap('自动标出 GPS 跳点', '橙色圈 = 定位漂移');
-await key('ArrowDown', 2600);
-// 6. mark & delete
-await cap('按 Del 标记废记录，自动跳到下一个');
+await W(2200);
+await cap('按 Del 标记，自动跳到下一个');
 await key('Delete', 1300);
-await key('Delete', 1500);
+await key('Delete', 1200);
+// 7. shuttle ride → mark
+await cap('自动识别疑似接驳车', '紫色虚线 = 降落后坐车的路段');
+await W(2800);
+await key('Delete', 800);
 await cap('一键清理，先移到「_已删除」可恢复');
 await click('#btnDel'); await W(1300);
 await click('#dlgMove'); await W(1700);
 await cap(null); await W(400);
-// 7. end card
+// 8. end card
 await page.evaluate(u => { pv.cursor(false); pv.card('end', u); }, url);
 await W(3200);
 

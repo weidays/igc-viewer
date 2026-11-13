@@ -12,7 +12,7 @@ SOURCES = ['src/template.html', 'promo/demo-init.js', 'promo/record.mjs']
 RUN = re.compile('[　-〿㐀-鿿豈-﫿＀-￯]+')
 
 # OpenCC 之后再按台湾 Windows 用户习惯修正
-FIXES = {'資源管理器': '檔案總管', '許可權': '權限', '滑翔傘': '飛行傘', '後臺': '背景', '回收站': '資源回收筒'}
+FIXES = {'資源管理器': '檔案總管', '許可權': '權限', '滑翔傘': '飛行傘', '後臺': '背景', '回收站': '資源回收筒', '引數': '參數', '坐車': '搭車'}
 
 # README 语言切换行，以及只在 README 里需要的修正
 LANG_HANS = '**简体中文** · [繁體中文](README.zh-Hant.md)'

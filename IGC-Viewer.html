@@ -681,6 +681,10 @@ button:hover{border-color:var(--acc)}
 button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
 #search{flex:1;min-width:0}
 #lang{margin-left:auto;padding:5px 4px}
+#btnSus{padding:5px 8px;font-size:12px}
+#btnSus.on{background:#d97706;border-color:#d97706;color:#fff}
+.warn.veh{color:#7c3aed!important}
+@media (prefers-color-scheme:dark){.warn.veh{color:#a78bfa!important}}
 #count{color:var(--muted);font-size:12px}
 #list{flex:1;overflow:auto;outline:none}
 .item{padding:6px 10px 6px 12px;border-bottom:1px solid var(--line);cursor:pointer;overflow:hidden}
@@ -741,6 +745,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
     </div>
     <div class="row">
       <input id="search" type="search" placeholder="筛选文件名 / 日期 / 飞行员…">
+      <button id="btnSus" title="只看有 GPS 跳点或疑似接驳车的文件（打开文件夹后会在后台逐个检查）">⚠ 可疑 0</button>
       <select id="sort" title="排序">
         <option value="name">名称 ↑</option>
         <option value="-name">名称 ↓</option>
@@ -790,7 +795,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-const S = { files: [], view: [], sel: -1, cache: new Map(), loadTok: 0, metaTok: 0, track: null, hoverIdx: -1 };
+const S = { files: [], view: [], sel: -1, cache: new Map(), loadTok: 0, metaTok: 0, track: null, hoverIdx: -1, scanPct: 100, susOnly: false };
 const CACHE_MAX = 40;
 
 /* ---------------- IGC parsing ---------------- */
@@ -868,13 +873,55 @@ function stats(t, lat, lon, alt) {
     const v = (alt[k] - alt[b]) / dt; if (v > maxV) maxV = v; if (v < minV) minV = v;
     const sp = dist(lat[b], lon[b], lat[k], lon[k]) / dt * 3600; if (sp > maxSp && sp < 400) maxSp = sp;
   }
-  return { n, dur: t[n - 1] - t[0], len, maxD, maxA, minA, maxV, minV, maxSp, gain: maxA - alt[0], jumps };
+  return { n, dur: t[n - 1] - t[0], len, maxD, maxA, minA, maxV, minV, maxSp, gain: maxA - alt[0], jumps, veh: vehicle(t, lat, lon, alt, jumps) };
+}
+// 疑似接驳车：滑翔伞在空中要么盘旋爬升（一直往同一边转），要么一边下沉一边滑翔。
+// 60 s 窗口里不盘旋，却「持续爬升」（车上山路，含之字形弯道）连续 ≥6 分钟，
+// 或「快速平移、高度不变」（车走平路）连续 ≥3 分钟且真的离开了原地，就判为疑似坐车。
+// 爬升要 6 分钟，是为了不把山脊上来回飞着爬升（动力升力）误判成坐车。
+function vehicle(t, lat, lon, alt, jumps) {
+  const n = t.length, out = []; if (n < 10) return out;
+  const cum = new Float64Array(n), cj = new Int32Array(n), ct = new Float64Array(n), bad = new Uint8Array(n);
+  for (const k of jumps) bad[k] = 1;
+  let ph = null;
+  for (let k = 1; k < n; k++) {
+    const d = dist(lat[k - 1], lon[k - 1], lat[k], lon[k]);
+    cum[k] = cum[k - 1] + d; cj[k] = cj[k - 1] + bad[k]; ct[k] = ct[k - 1];
+    if (d > 0.003) { // heading change, only between segments longer than 3 m
+      const h = Math.atan2((lon[k] - lon[k - 1]) * Math.cos(lat[k] * D2R), lat[k] - lat[k - 1]) / D2R;
+      if (ph !== null) { let dh = h - ph; dh -= 360 * Math.round(dh / 360); ct[k] += dh; }
+      ph = h;
+    }
+  }
+  let a = 0, s0 = -1, last = -1, nLevel = 0, nAll = 0;
+  const close = () => {
+    const d = s0 >= 0 ? t[last] - t[s0] : 0;
+    const km = s0 >= 0 ? cum[last] - cum[s0] : 0;
+    // 平路那种还要真的「开走了」：山脊上来回飞的起点终点离得近
+    const away = s0 >= 0 && dist(lat[s0], lon[s0], lat[last], lon[last]) >= 0.4 * km;
+    if (d >= 360 || (d >= 180 && nLevel * 2 >= nAll && away)) out.push({ i0: s0, i1: last, km });
+    s0 = -1; nLevel = nAll = 0;
+  };
+  for (let k = 1; k < n; k++) {
+    while (t[k] - t[a] > 60) a++;
+    const dt = t[k] - t[a]; if (dt < 40 || cj[k] !== cj[a]) continue;
+    const circling = Math.abs(ct[k] - ct[a]) > 300;
+    if (circling) continue;
+    const vPath = (cum[k] - cum[a]) / dt * 3600, vDisp = dist(lat[a], lon[a], lat[k], lon[k]) / dt * 3600, vz = (alt[k] - alt[a]) / dt;
+    const level = vDisp > 35 && vDisp < 150 && Math.abs(vz) < 0.3;
+    if (level || (vz > 0.3 && vPath > 12 && vPath < 110)) {
+      if (s0 < 0 || t[k] - t[last] > 60) { close(); s0 = a; }
+      last = k; nAll++; if (level) nLevel++;
+    }
+  }
+  close();
+  return out;
 }
 
 /* ---------------- file list ---------------- */
 function addEntries(list, label, root) {
   S.files = list; S.cache.clear(); S.sel = -1;
-  S.rootLabel = label || ''; S.root = root || null;
+  S.rootLabel = label || ''; S.root = root || null; S.scanPct = 0; S.susOnly = false; updSus();
   loadMarks();
   applyView(); scanMeta();
   if (S.view.length) select(0);
@@ -885,7 +932,8 @@ function nameDate(name) { const m = name.match(/(20\d{2})[-_.]?(\d{2})[-_.]?(\d{
 function applyView() {
   const q = $('#search').value.trim().toLowerCase();
   let v = S.files;
-  if (q) { const parts = q.split(/\s+/); v = v.filter(e => { const s = (e.path + ' ' + (e.meta ? (e.meta.date || '') + ' ' + (e.meta.pilot || '') + ' ' + (e.meta.glider || '') + ' ' + (e.meta.site || '') : '')).toLowerCase(); return parts.every(p => s.includes(p)); }); }
+  if (S.susOnly) v = v.filter(suspicious);
+  if (q) { const parts = q.split(/\s+/); v = v.filter(e => { const tags = probTags(e); const s = (e.path + ' ' + (e.meta ? (e.meta.date || '') + ' ' + (e.meta.pilot || '') + ' ' + (e.meta.glider || '') + ' ' + (e.meta.site || '') : '') + ' ' + tags + ' ' + I18N.conv(tags)).toLowerCase(); return parts.every(p => s.includes(p)); }); }
   const so = $('#sort').value, dir = so[0] === '-' ? -1 : 1, key = so.replace('-', '');
   const coll = new Intl.Collator('zh', { numeric: true });
   v = v.slice().sort((a, b) => {
@@ -901,10 +949,13 @@ function metaLine(e) {
   const m = e.meta; if (!m) return e.dir || '…';
   return [m.date, m.pilot, m.glider, e.dir].filter(Boolean).join(' · ') || '—';
 }
+function probTags(e) { return [e.jumps ? `⚠ GPS跳点×${e.jumps}` : '', e.veh ? `🚐 疑似接驳车` : ''].filter(Boolean).join(' '); }
+const suspicious = e => !!(e.jumps || e.veh);
 function setMeta(e) {
   if (!e.el) return;
   const m = e.el.lastChild; m.textContent = metaLine(e);
-  if (e.jumps) { const w = document.createElement('span'); w.className = 'w'; w.textContent = `⚠ GPS跳点×${e.jumps} · `; m.prepend(w); }
+  const tags = probTags(e);
+  if (tags) { const w = document.createElement('span'); w.className = 'w'; w.textContent = tags + ' · '; m.prepend(w); }
 }
 function renderList() {
   const el = $('#list'); const frag = document.createDocumentFragment();
@@ -917,7 +968,7 @@ function renderList() {
   el.replaceChildren(frag);
   $('#count').textContent = `${S.view.length}${S.view.length !== S.files.length ? ' / ' + S.files.length : ''} 个文件`;
   if (S.sel >= 0) S.view[S.sel].el.scrollIntoView({ block: 'nearest' });
-  updDel();
+  updDel(); updSus();
 }
 
 /* ---------------- mark & delete ---------------- */
@@ -1008,7 +1059,37 @@ async function scanMeta() {
   }
   await Promise.all(Array.from({ length: 8 }, worker));
   if (tok === S.metaTok && ($('#sort').value.includes('date') || $('#search').value)) applyView();
+  if (tok === S.metaTok) scanProblems(tok);
 }
+
+// after the headers: fully parse every file once in the background, so problem files are flagged in the list
+function setFlags(e, tr) {
+  const was = suspicious(e);
+  e.jumps = tr.stats ? tr.stats.jumps.length : 0; e.veh = tr.stats ? tr.stats.veh.length : 0; e.checked = true;
+  setMeta(e); if (was !== suspicious(e)) updSus();
+}
+async function scanProblems(tok) {
+  const q = S.files.filter(e => !e.checked); let idx = 0, done = 0;
+  const total = q.length;
+  async function worker() {
+    while (idx < q.length && tok === S.metaTok) {
+      const e = q[idx++];
+      if (!e.checked) { try { const f = await entryFile(e); setFlags(e, parseIGC(decode(await f.arrayBuffer()))); } catch { e.checked = true; } }
+      done++; S.scanPct = total ? Math.round(done / total * 100) : 100;
+      if (done % 25 === 0) { updSus(); if (S.susOnly) applyView(); }
+      await new Promise(r => setTimeout(r));
+    }
+  }
+  await Promise.all([worker(), worker()]);
+  if (tok !== S.metaTok) return;
+  S.scanPct = 100; updSus(); if (S.susOnly) applyView();
+}
+function updSus() {
+  const n = S.files.filter(suspicious).length, b = $('#btnSus');
+  b.textContent = `⚠ 可疑 ${n}` + (S.scanPct < 100 ? ` · 检查 ${S.scanPct}%` : '');
+  b.classList.toggle('on', !!S.susOnly);
+}
+$('#btnSus').onclick = () => { S.susOnly = !S.susOnly; updSus(); applyView(); if (S.sel < 0 && S.view.length) select(0); };
 
 /* ---------------- loading & selection ---------------- */
 async function getTrack(e) {
@@ -1017,7 +1098,7 @@ async function getTrack(e) {
   const tr = parseIGC(decode(await f.arrayBuffer()));
   tr.size = f.size;
   if (!e.meta || !e.meta.date) e.meta = Object.assign({}, e.meta, tr.h);
-  e.jumps = tr.stats ? tr.stats.jumps.length : 0; setMeta(e);
+  setFlags(e, tr);
   S.cache.set(e, tr);
   if (S.cache.size > CACHE_MAX) S.cache.delete(S.cache.keys().next().value);
   return tr;
@@ -1075,6 +1156,7 @@ function showTrack(tr) {
   if (h.glider) add('机型', h.glider);
   if (h.site) add('场地', h.site);
   if (st && st.jumps.length) parts.push(`<div class="warn">⚠ GPS 跳点 ${st.jumps.length} 处（地图上橙色圈）</div>`);
+  if (st && st.veh.length) parts.push(`<div class="warn veh">🚐 疑似接驳车 ${st.veh.length} 段，约 ${st.veh.reduce((a, s) => a + s.km, 0).toFixed(1)} km（地图上紫色虚线）</div>`);
   if (st) {
     add('时间', `${fmtTime(tr.t[0], tz)}–${fmtTime(tr.t[st.n - 1], tz)} ${tzLbl}`);
     add('时长', fmtDur(st.dur));
@@ -1092,6 +1174,7 @@ function showTrack(tr) {
   for (let k = 0; k < n; k++) ll[k] = [tr.lat[k], tr.lon[k]];
   line.setLatLngs(ll);
   mStart.setLatLng(ll[0]).addTo(map); mEnd.setLatLng(ll[n - 1]).addTo(map);
+  for (const g of st.veh) L.polyline(ll.slice(g.i0, g.i1 + 1), { renderer: ren, color: '#7c3aed', weight: 7, opacity: .6, dashArray: '10 8' }).bindTooltip(`疑似接驳车 ${fmtTime(tr.t[g.i0], tz).slice(0, 5)}–${fmtTime(tr.t[g.i1], tz).slice(0, 5)}，约 ${g.km.toFixed(1)} km`, { sticky: true }).addTo(jumpLayer);
   for (const k of st.jumps.slice(0, 300)) L.circleMarker(ll[k], { renderer: ren, radius: 8, color: '#f59e0b', weight: 3, fill: false }).bindTooltip(`GPS 跳点 ${fmtTime(tr.t[k], tz)}`).addTo(jumpLayer);
   map.fitBounds(line.getBounds(), { padding: [24, 24], animate: false, maxZoom: 16 });
   drawProf();
@@ -1121,6 +1204,7 @@ function drawProf() {
   const tz = tr.h.tz || 0, tstep = niceTime((t1 - t0) / Math.max(2, pw / 90));
   cx.textAlign = 'center'; cx.textBaseline = 'top';
   for (let s = Math.ceil(t0 / tstep) * tstep; s <= t1; s += tstep) cx.fillText(fmtTime(s, tz).slice(0, 5), X(s), H - PAD.b + 4);
+  for (const g of tr.stats.veh) { cx.fillStyle = 'rgba(124,58,237,.16)'; cx.fillRect(X(t[g.i0]), PAD.t, X(t[g.i1]) - X(t[g.i0]), ph); }
   // area — decimate to one sample per pixel column (min/max) for speed
   cx.beginPath(); cx.moveTo(X(t0), Y(alt[0]));
   const per = Math.max(1, Math.floor(n / (pw * 2)));
@@ -1232,7 +1316,7 @@ if (window.showDirectoryPicker) idbGet('lastDir').then(dh => { if (dh) { const b
 
 /* ---------------- 简体 / 繁體 ---------------- */
 // 繁體对照表由 tools/gen_hant.py（OpenCC s2twp）生成，build.py 内联到这里
-const HANT = {"」会把文件移到「":"」會把檔案移到「","」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。":"」，確認沒問題後再在檔案總管裡刪掉那個資料夾。「永久刪除」不進資源回收筒，無法恢復。瀏覽器會先詢問一次寫入權限，點「允許」。","一键清理，先移到「":"一鍵清理，先移到「","上次文件夹":"上次資料夾","个":"個","个文件":"個檔案","个文件没删掉：":"個檔案沒刪掉：","个标记为「待删」的文件":"個標記為「待刪」的檔案","免费":"免費","内联到这里":"內聯到這裡","切换":"切換","删除已标记":"刪除已標記","单个":"單個","卫星":"衛星","双击即用":"雙擊即用","取消待删":"取消待刪","名称":"名稱","后台预读相邻文件，不用等":"背景預讀相鄰檔案，不用等","场地":"場地","处理":"處理","处理中":"處理中","处理所有标了「待删」的文件":"處理所有標了「待刪」的檔案","处（地图上橙色圈）":"處（地圖上橙色圈）","子文件夹也会一起扫描":"子資料夾也會一起掃描","已删除":"已刪除","已删除」可恢复":"已刪除」可恢復","已删除」文件夹（可恢复）":"已刪除」資料夾（可恢復）","已永久删除":"已永久刪除","底图":"底圖","开源":"開源","录制宣传片：":"錄製宣傳片：","待删":"待刪","或把文件":"或把檔案","打开一个包含":"開啟一個包含","打开文件":"開啟檔案","打开文件夹":"開啟資料夾","打开文件夹，自动找出所有":"開啟資料夾，自動找出所有","扫描中":"掃描中","抓帧，":"抓幀，","文件":"檔案","文件了":"檔案了","文件夹":"資料夾","文件夹直接拖进来":"資料夾直接拖進來","文件夹里没有":"資料夾裡沒有","无":"無","无头打开":"無頭開啟","无底图（最快）":"無底圖（最快）","无法创建":"無法建立","无法打开上次的文件夹：":"無法開啟上次的資料夾：","旧":"舊","时长":"時長","时间":"時間","未加载文件":"未載入檔案","机型":"機型","松开以加载":"鬆開以載入","极速预览":"極速預覽","标记废记录，自动跳到下一个":"標記廢記錄，自動跳到下一個","标记待删":"標記待刪","标记待删并跳到下一个":"標記待刪並跳到下一個","气压":"氣壓","永久删除":"永久刪除","没有获得写入权限，未删除任何文件。":"沒有獲得寫入權限，未刪除任何檔案。","滑翔伞":"飛行傘","滑翔机飞行记录，一眼看完":"滑翔機飛行記錄，一眼看完","点数":"點數","用本机":"用本機","的文件夹":"的資料夾","离起飞点最远":"離起飛點最遠","秒切换，航迹立刻出来":"秒切換，航跡立刻出來","筛选文件名":"篩選檔名","简体":"簡體","繁體对照表由":"繁體對照表由","自动标出":"自動標出","航迹长":"航跡長","记录（航迹点）":"記錄（航跡點）","请求权限失败：":"請求權限失敗：","读取失败：":"讀取失敗：","起飞":"起飛","跳点":"跳點","跳点：单步":"跳點：單步","还有":"還有","这个文件里没有有效的":"這個檔案裡沒有有效的","这些文件是用「打开文件」或拖入单个文件加载的，浏览器无权删除。请用「打开文件夹」（或把整个文件夹拖进来）重新打开后再删。":"這些檔案是用「開啟檔案」或拖入單個檔案載入的，瀏覽器無權刪除。請用「開啟資料夾」（或把整個資料夾拖進來）重新開啟後再刪。","这里没有找到":"這裡沒有找到","选择一个或多个":"選擇一個或多個","选择文件夹（会递归扫描子文件夹）":"選擇資料夾（會遞迴掃描子資料夾）","重新打开上次的文件夹":"重新開啟上次的資料夾","重新打开：":"重新開啟：","飞行员":"飛行員","飞行记录":"飛行記錄","高度曲线与地图联动":"高度曲線與地圖聯動","鿿豈":"鿿豈","，或单步高度变化":"，或單步高度變化","，按脚本操作，":"，按指令碼操作，"};
+const HANT = {"」会把文件移到「":"」會把檔案移到「","」，确认没问题后再在资源管理器里删掉那个文件夹。「永久删除」不进回收站，无法恢复。浏览器会先询问一次写入权限，点「允许」。":"」，確認沒問題後再在檔案總管裡刪掉那個資料夾。「永久刪除」不進資源回收筒，無法恢復。瀏覽器會先詢問一次寫入權限，點「允許」。","一键清理，先移到「":"一鍵清理，先移到「","上次文件夹":"上次資料夾","个":"個","个文件":"個檔案","个文件没删掉：":"個檔案沒刪掉：","个标记为「待删」的文件":"個標記為「待刪」的檔案","免费":"免費","内联到这里":"內聯到這裡","分钟且真的离开了原地，就判为疑似坐车。":"分鐘且真的離開了原地，就判為疑似搭車。","分钟，":"分鐘，","分钟，是为了不把山脊上来回飞着爬升（动力升力）误判成坐车。":"分鐘，是為了不把山脊上來回飛著爬升（動力升力）誤判成搭車。","切换":"切換","删除已标记":"刪除已標記","单个":"單個","卫星":"衛星","双击即用":"雙擊即用","取消待删":"取消待刪","可疑：只看有问题的记录":"可疑：只看有問題的記錄","名称":"名稱","后台预读相邻文件，不用等":"背景預讀相鄰檔案，不用等","场地":"場地","处理":"處理","处理中":"處理中","处理所有标了「待删」的文件":"處理所有標了「待刪」的檔案","处（地图上橙色圈）":"處（地圖上橙色圈）","子文件夹也会一起扫描":"子資料夾也會一起掃描","已删除":"已刪除","已删除」可恢复":"已刪除」可恢復","已删除」文件夹（可恢复）":"已刪除」資料夾（可恢復）","已永久删除":"已永久刪除","平路那种还要真的「开走了」：山脊上来回飞的起点终点离得近":"平路那種還要真的「開走了」：山脊上來回飛的起點終點離得近","底图":"底圖","开源":"開源","录制宣传片：":"錄製宣傳片：","待删":"待刪","或「快速平移、高度不变」（车走平路）连续":"或「快速平移、高度不變」（車走平路）連續","或把文件":"或把檔案","打开一个包含":"開啟一個包含","打开文件":"開啟檔案","打开文件夹":"開啟資料夾","打开文件夹后在后台逐个检查":"開啟資料夾後在背景逐個檢查","打开文件夹，自动找出所有":"開啟資料夾，自動找出所有","扫描中":"掃描中","抓帧，":"抓幀，","文件":"檔案","文件了":"檔案了","文件夹":"資料夾","文件夹直接拖进来":"資料夾直接拖進來","文件夹里没有":"資料夾裡沒有","无":"無","无头打开":"無頭開啟","无底图（最快）":"無底圖（最快）","无法创建":"無法建立","无法打开上次的文件夹：":"無法開啟上次的資料夾：","旧":"舊","时长":"時長","时间":"時間","未加载文件":"未載入檔案","机型":"機型","松开以加载":"鬆開以載入","极速预览":"極速預覽","标记待删":"標記待刪","标记待删并跳到下一个":"標記待刪並跳到下一個","标记，自动跳到下一个":"標記，自動跳到下一個","检查":"檢查","段，约":"段，約","气压":"氣壓","永久删除":"永久刪除","没有获得写入权限，未删除任何文件。":"沒有獲得寫入權限，未刪除任何檔案。","滑翔伞":"飛行傘","滑翔机飞行记录，一眼看完":"滑翔機飛行記錄，一眼看完","点数":"點數","用本机":"用本機","疑似接驳车":"疑似接駁車","疑似接驳车：滑翔伞在空中要么盘旋爬升（一直往同一边转），要么一边下沉一边滑翔。":"疑似接駁車：飛行傘在空中要麼盤旋爬升（一直往同一邊轉），要麼一邊下沉一邊滑翔。","的文件夹":"的資料夾","离起飞点最远":"離起飛點最遠","秒切换，航迹立刻出来":"秒切換，航跡立刻出來","窗口里不盘旋，却「持续爬升」（车上山路，含之字形弯道）连续":"窗口裡不盤旋，卻「持續爬升」（車上山路，含之字形彎道）連續","筛选文件名":"篩選檔名","简体":"簡體","紫色虚线":"紫色虛線","繁體对照表由":"繁體對照表由","自动标出":"自動標出","自动识别疑似接驳车":"自動識別疑似接駁車","航迹长":"航跡長","记录（航迹点）":"記錄（航跡點）","请求权限失败：":"請求權限失敗：","读取失败：":"讀取失敗：","起飞":"起飛","跳点":"跳點","跳点或疑似接驳车的文件（打开文件夹后会在后台逐个检查）":"跳點或疑似接駁車的檔案（開啟資料夾後會在背景逐個檢查）","跳点：单步":"跳點：單步","还有":"還有","这个文件里没有有效的":"這個檔案裡沒有有效的","这些文件是用「打开文件」或拖入单个文件加载的，浏览器无权删除。请用「打开文件夹」（或把整个文件夹拖进来）重新打开后再删。":"這些檔案是用「開啟檔案」或拖入單個檔案載入的，瀏覽器無權刪除。請用「開啟資料夾」（或把整個資料夾拖進來）重新開啟後再刪。","这里没有找到":"這裡沒有找到","选择一个或多个":"選擇一個或多個","选择文件夹（会递归扫描子文件夹）":"選擇資料夾（會遞迴掃描子資料夾）","重新打开上次的文件夹":"重新開啟上次的資料夾","重新打开：":"重新開啟：","降落后坐车的路段":"降落後搭車的路段","飞行员":"飛行員","飞行记录":"飛行記錄","高度曲线与地图联动":"高度曲線與地圖聯動","鿿豈":"鿿豈","（地图上紫色虚线）":"（地圖上紫色虛線）","，或单步高度变化":"，或單步高度變化","，按脚本操作，":"，按指令碼操作，","，约":"，約"};
 const I18N = { hant: false, re: /[　-〿㐀-鿿豈-﫿＀-￯]+/g,
   conv(s) { return this.hant && s ? String(s).replace(this.re, r => HANT[r] || r) : s; } };
 const i18nOrig = new WeakMap(), i18nMine = new WeakMap(), i18nAO = new WeakMap(), i18nAM = new WeakMap();
