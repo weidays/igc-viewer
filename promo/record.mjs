@@ -1,4 +1,4 @@
-// 录制宣传片：node record.mjs [github-url] [hans|hant]   （hant = 繁體版）
+// 录制宣传片：node record.mjs [url] [hans|hant|en]
 // 用本机 Chrome 无头打开 IGC-Viewer.html，按脚本操作，CDP screencast 抓帧，ffmpeg 合成 out/promo.mp4
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -8,7 +8,21 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const url = process.argv[2] || 'github.com/igc-viewer';
-const lang = process.argv[3] === 'hant' ? 'hant' : 'hans';
+const lang = ['hant', 'en'].includes(process.argv[3]) ? process.argv[3] : 'hans';
+// on-screen text: 简体 here, 繁體 converted with the same table as the app, English written out
+const ZH = {
+  card: { name: '光迹 IGC 查看器', sub: 'Lumitrail IGC Viewer', tagline: '滑翔伞 / 滑翔机飞行记录，一眼看完', tags: ['在线就能用', '不用注册', '文件不上传'], end: '免费 · 开源 · 打开网页就能用' },
+  caps: [['打开文件夹，自动找出所有 IGC', '子文件夹也会一起扫描'], ['↑ ↓ 秒切换，航迹立刻出来', '后台预读相邻文件，不用等'], ['高度曲线与地图联动', '时间 · 高度 · 爬升率 · 地速'],
+    ['⚠ 可疑：只看有问题的记录', '打开文件夹后在后台逐个检查'], ['自动标出 GPS 跳点', '橙色圈 = 定位漂移'], ['按 Del 标记，自动跳到下一个'], ['自动识别疑似接驳车', '紫色虚线 = 降落后坐车的路段'], ['一键清理，先移到「_已删除」可恢复']],
+};
+const EN = {
+  card: { name: 'Lumitrail IGC Viewer', sub: 'Free online IGC file viewer', tagline: 'Paragliding & gliding flight logs at a glance', tags: ['Runs in your browser', 'No sign-up', 'Nothing uploaded'], end: 'Free · Open source · Just open the page' },
+  caps: [['Open a folder — every IGC file is found', 'Subfolders included'], ['↑ ↓ to switch — tracks appear instantly', 'Neighbouring files are preloaded'], ['Altitude profile linked to the map', 'Time · altitude · climb · ground speed'],
+    ['⚠ Suspicious: show only problem flights', 'Every file is checked in the background'], ['GPS glitches flagged automatically', 'Orange circles = position jumps'], ['Press Del to mark, jump to the next'], ['Shuttle rides detected', 'Purple dashes = drove back after landing'], ['Clean up in one click — moved to “_deleted”, recoverable']],
+};
+const HANT = JSON.parse(fs.readFileSync(path.join(here, '..', 'src', 'zh-Hant.json'), 'utf8'));
+const toHant = x => typeof x === 'string' ? x.replace(/[\u3000-\u303f\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]+/g, r => HANT[r] || r) : Array.isArray(x) ? x.map(toHant) : Object.fromEntries(Object.entries(x).map(([k, v]) => [k, toHant(v)]));
+const TXT = lang === 'en' ? EN : lang === 'hant' ? toHant(ZH) : ZH;
 const out = path.join(here, 'out'), frames = path.join(out, 'frames-' + lang);
 fs.rmSync(frames, { recursive: true, force: true }); fs.mkdirSync(frames, { recursive: true });
 
@@ -16,10 +30,10 @@ const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/M
 const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--window-size=1280,807', '--force-device-scale-factor=1.5'] });
 const page = await browser.newPage({ viewport: null });
 await page.addInitScript({ path: path.join(here, 'demo-init.js') });
-await page.goto(pathToFileURL(path.join(here, '..', 'IGC-Viewer.html')).href);
+await page.goto(pathToFileURL(path.join(here, '..', 'site', { hans: '', hant: 'zh-hant/', en: 'en/' }[lang], 'index.html')).href);
 const vp = await page.evaluate(() => [innerWidth, innerHeight, devicePixelRatio]);
 if (vp.join() !== '1280,720,1.5') throw new Error('unexpected viewport ' + vp + ' — tweak --window-size');
-await page.evaluate(l => { setLang(l); pv.card('title'); pv.cursor(false); }, lang);
+await page.evaluate(t => { document.querySelector('#langbar').hidden = true; ensureBase(); pv.card('title', null, t); pv.cursor(false); }, TXT.card);
 // warm map tiles for the demo area so the recording doesn't show grey squares
 const nFlights = await page.evaluate(async () => {
   const root = await showDirectoryPicker(), y = await root.getDirectoryHandle('2025'); window.__warm = [];
@@ -53,41 +67,41 @@ await W(2600);
 await page.evaluate(() => pv.card(null)); await W(500);
 await page.mouse.move(mx, my); await page.evaluate(() => pv.cursor(true));
 // 2. open folder
-await cap('打开文件夹，自动找出所有 IGC', '子文件夹也会一起扫描');
+await cap(...TXT.caps[0]);
 await click('#btnDir');
 await W(2600);
 // 3. fast browsing
-await cap('↑ ↓ 秒切换，航迹立刻出来', '后台预读相邻文件，不用等');
+await cap(...TXT.caps[1]);
 await glide(640, 360, 500);
 for (let i = 0; i < 3; i++) await key('ArrowDown', 1050);
 await W(500);
 // 4. profile ↔ map
-await cap('高度曲线与地图联动', '时间 · 高度 · 爬升率 · 地速');
+await cap(...TXT.caps[2]);
 const pb = await page.locator('#prof').boundingBox();
 await glide(pb.x + 80, pb.y + pb.height / 2, 600);
 await glide(pb.x + pb.width - 40, pb.y + pb.height / 2, 3200);
 await W(400);
 await glide(640, 330, 500);
 // 5. suspicious-only filter
-await cap('⚠ 可疑：只看有问题的记录', '打开文件夹后在后台逐个检查');
+await cap(...TXT.caps[3]);
 await click('#btnSus'); await W(1700);
 await glide(640, 330, 500);
 // 6. GPS jumps → mark
-await cap('自动标出 GPS 跳点', '橙色圈 = 定位漂移');
+await cap(...TXT.caps[4]);
 await W(2200);
-await cap('按 Del 标记，自动跳到下一个');
+await cap(...TXT.caps[5]);
 await key('Delete', 1300);
 await key('Delete', 1200);
 // 7. shuttle ride → mark
-await cap('自动识别疑似接驳车', '紫色虚线 = 降落后坐车的路段');
+await cap(...TXT.caps[6]);
 await W(2800);
 await key('Delete', 800);
-await cap('一键清理，先移到「_已删除」可恢复');
+await cap(...TXT.caps[7]);
 await click('#btnDel'); await W(1300);
 await click('#dlgMove'); await W(1700);
 await cap(null); await W(400);
 // 8. end card
-await page.evaluate(u => { pv.cursor(false); pv.card('end', u); }, url);
+await page.evaluate(([u, t]) => { pv.cursor(false); pv.card('end', u, t); }, [url, TXT.card]);
 await W(3200);
 
 await cdp.send('Page.stopScreencast');

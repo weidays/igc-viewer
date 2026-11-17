@@ -4,19 +4,19 @@
 
 **简体中文** · [繁體中文](README.zh-Hant.md)
 
-> 🌐 **在线版即将上线：lumitrail.app/tools/igc-viewer**（上线前请先用下面的离线版）
+> 🌐 **在线使用，不用下载：https://lumitrail.app/tools/igc-viewer/** · [English](https://lumitrail.app/tools/igc-viewer/en/)
 
 滑翔伞（台湾称飛行傘）/ 滑翔机 `.igc` 飞行记录的查看和清理工具：打开文件夹，↑↓ 秒切换看航迹，自动标出 GPS 跳点和疑似接驳车，上传竞赛平台前一键清掉废记录。由 [光迹 Lumitrail](https://lumitrail.app) 提供，免费开源。
 
-A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Online version coming soon at lumitrail.app/tools/igc-viewer — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
+A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Use it online at **https://lumitrail.app/tools/igc-viewer/en/** — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
 
 ![demo](docs/demo.gif)
 
 ## 使用
 
-**在线**（即将上线）：用电脑上的 **Edge** 或 **Chrome** 打开 lumitrail.app/tools/igc-viewer ，点「打开文件夹」，选你存 IGC 的文件夹。不用注册。
+**在线**：用电脑上的 **Edge** 或 **Chrome** 打开 https://lumitrail.app/tools/igc-viewer/ ，点「打开文件夹」，选你存 IGC 的文件夹。不用注册。繁體版：https://lumitrail.app/tools/igc-viewer/zh-hant/ ，English：https://lumitrail.app/tools/igc-viewer/en/ 。
 
-**离线**：下载 [`IGC-Viewer.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer.html)，双击用浏览器打开就行。没网也能看航迹，只是没有地图底图。
+**离线**：下载 [`IGC-Viewer.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer.html)（简体）、[`IGC-Viewer-zh-Hant.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer-zh-Hant.html)（繁體）或 [`IGC-Viewer-en.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer-en.html)（English），双击用浏览器打开就行。没网也能看航迹，只是没有地图底图。
 
 **隐私**：IGC 文件只在你自己的电脑上读取，不会上传到任何地方。地图底图会向 Esri 请求图块，因此会透露飞行区域的大致位置；介意的话，在右上角「底图」里选「无底图」。
 
@@ -31,7 +31,7 @@ A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lu
 - **⚠ 可疑筛选**：打开文件夹后在后台逐个检查所有文件，点「⚠ 可疑」只看有 GPS 跳点或疑似接驳车的记录，上传竞赛平台前快速清理。
 - **标记 & 清理**：按 <kbd>Del</kbd> / <kbd>D</kbd> 标记「待删」并跳到下一个，然后一键「移到 `_已删除` 文件夹（可恢复）」或永久删除。
 - **筛选排序**：按文件名、日期、飞行员筛选；按名称或日期排序。
-- **简体 / 繁體**：在左上角按钮那一排切换；繁體中文系统（台湾、香港、澳门）自动用繁體，用语按台湾习惯（檔案、資料夾…）。文件名、飞行员名等你自己的数据保持原样。
+- **三种语言**：简体中文、繁體中文、English，各有独立网址，在左上角按钮那一排切换；浏览器语言不一样时会提示切换。繁體用语按台湾习惯（檔案、資料夾…）。文件名、飞行员名等你自己的数据保持原样。
 - 底图可切换：Esri 地形 / Esri 卫星 / OpenTopoMap / 无底图。
 
 | 快捷键 | 作用 |
@@ -54,13 +54,16 @@ A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lu
 
 ## 开发
 
-源码在 [`src/template.html`](src/template.html)，Leaflet 在构建时内联进去：
+源码在 [`src/template.html`](src/template.html)（简体写成，英文版写在 `L:en` 块里），Leaflet 和图标在构建时内联进去：
 
 ```bash
-python3 build.py   # 生成 IGC-Viewer.html
+python3 build.py   # 生成 site/（网站用的三语页面 + csp-hashes.txt）和 dist/（三个离线文件）
 ```
 
-改了界面文字或本 README 后，运行下面的命令重新生成繁體对照表 `src/zh-Hant.json` 和 [`README.zh-Hant.md`](README.zh-Hant.md)（需要 OpenCC，不要直接改繁體 README）。`build.py` 发现有界面文字没有繁體时会提示：
+- 繁體：由简体整页转换，对照表是 `src/zh-Hant.json`。
+- English：大段内容写在模板的 `L:en` 块里，界面短语在 `src/en.json`。`build.py` 发现有文字没翻译会报错。
+
+改了界面文字或本 README 后，运行下面的命令重新生成繁體对照表和 [`README.zh-Hant.md`](README.zh-Hant.md)（需要 OpenCC，不要直接改繁體 README）：
 
 ```bash
 pip install opencc && python3 tools/gen_hant.py
@@ -70,8 +73,9 @@ pip install opencc && python3 tools/gen_hant.py
 
 ```bash
 cd promo && npm install
-node record.mjs github.com/weidays/igc-viewer hans   # 简体版 → out/promo-hans.mp4
-node record.mjs github.com/weidays/igc-viewer hant   # 繁體版 → out/promo-hant.mp4
+node record.mjs lumitrail.app/tools/igc-viewer hans      # 简体版 → out/promo-hans.mp4
+node record.mjs lumitrail.app/tools/igc-viewer hant      # 繁體版 → out/promo-hant.mp4
+node record.mjs lumitrail.app/tools/igc-viewer/en en     # English → out/promo-en.mp4
 ```
 
 ## 许可

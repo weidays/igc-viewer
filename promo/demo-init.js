@@ -54,7 +54,7 @@
   class DH { constructor(name) { this.kind = 'directory'; this.name = name; this.c = new Map(); } async *entries() { for (const e of [...this.c]) yield e; } async getFileHandle(n, o) { if (this.c.has(n)) return this.c.get(n); if (o && o.create) { const f = new FH(n, ''); this.c.set(n, f); return f; } throw new DOMException('nf', 'NotFoundError'); } async getDirectoryHandle(n, o) { if (!this.c.has(n) && o && o.create) this.c.set(n, new DH(n)); if (!this.c.has(n)) throw new DOMException('nf', 'NotFoundError'); return this.c.get(n); } async removeEntry(n) { this.c.delete(n); } async requestPermission() { return 'granted'; } }
   const root = new DH('飞行记录'), y = new DH('2025'); root.c.set('2025', y);
   for (const [n, o] of specs) y.c.set(n, new FH(n, flight({ ...base, ...o })));
-  window.showDirectoryPicker = async () => { root.name = typeof I18N !== 'undefined' && I18N.hant ? '飛行記錄' : '飞行记录'; return root; };
+  window.showDirectoryPicker = async () => { root.name = { 'zh-Hant': '飛行記錄', 'en': 'Flights' }[document.documentElement.lang] || '飞行记录'; return root; };
 
   /* ---------- overlays ---------- */
   const css = `
@@ -67,14 +67,16 @@
   #pv-cap small{display:block;font-weight:400;font-size:16px;opacity:.75;margin-top:2px}
   #pv-key{position:fixed;left:24px;bottom:24px;z-index:99990;pointer-events:none;font:700 30px/1 system-ui;color:#111;background:#fff;border:1px solid #cbd5e1;border-bottom-width:5px;border-radius:10px;padding:10px 16px;min-width:56px;text-align:center;opacity:0;transition:opacity .15s;box-shadow:0 6px 20px rgba(0,0,0,.18)}
   #pv-key.on{opacity:1}
-  #pv-card{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(1200px 600px at 30% 20%,#1e3a8a,#0b1220 70%);color:#fff;font-family:"PingFang SC",system-ui,sans-serif;transition:opacity .6s;text-align:center}
+  #pv-card{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(1200px 650px at 25% 15%,#0e4a3c,#07120f 70%);color:#fff;font-family:"PingFang SC",system-ui,sans-serif;transition:opacity .6s;text-align:center}
   #pv-card.off{opacity:0;pointer-events:none}
-  #pv-card h1{margin:0;font-size:84px;letter-spacing:1px;font-weight:800}
-  #pv-card h1 span{color:#fb7185}
+  #pv-card h1{margin:0;font-size:76px;letter-spacing:1px;font-weight:800}
+  #pv-card h1 small{display:block;font-size:30px;font-weight:500;color:#9fe9d6;margin-top:10px;letter-spacing:.5px}
+  #pv-card img.logo{width:132px;height:132px;border-radius:30px;box-shadow:0 12px 40px rgba(0,0,0,.45);margin-bottom:8px}
+  #pv-card h1 span{color:#3be3c0}
   #pv-card p{margin:0;font-size:30px;opacity:.9}
   #pv-card .tags{display:flex;gap:12px;margin-top:10px}
   #pv-card .tags b{font-weight:500;font-size:20px;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 16px}
-  #pv-card .url{font-family:Menlo,monospace;font-size:24px;color:#93c5fd;margin-top:8px}
+  #pv-card .url{font-family:Menlo,monospace;font-size:30px;color:#3be3c0;margin-top:10px}
   #pv-card svg{margin-bottom:6px}`;
   const keyName = { ArrowDown: '↓', ArrowUp: '↑', Delete: 'Del' };
   addEventListener('DOMContentLoaded', () => {
@@ -90,12 +92,13 @@
   const logo = `<svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="56" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.25)"/><path d="M24 82 C40 40, 52 96, 66 58 S 90 30, 98 40" fill="none" stroke="#fb7185" stroke-width="6" stroke-linecap="round"/><circle cx="24" cy="82" r="7" fill="#22c55e"/><circle cx="98" cy="40" r="7" fill="#ef4444"/></svg>`;
   window.pv = {
     cap(t, sub) { const c = document.getElementById('pv-cap'); if (!t) { c.classList.remove('on'); return; } c.innerHTML = t + (sub ? `<small>${sub}</small>` : ''); c.classList.add('on'); },
-    card(kind, url) {
+    card(kind, url, t) {
       const c = document.getElementById('pv-card');
       if (!kind) { c.classList.add('off'); return; }
+      const logo = `<img class="logo" src="${document.querySelector('#brand img').src}" alt="">`;
       c.innerHTML = kind === 'title'
-        ? `${logo}<h1>IGC <span>Viewer</span></h1><p>滑翔伞 / 滑翔机飞行记录，一眼看完</p><div class="tags"><b>单个 HTML</b><b>双击即用</b><b>极速预览</b></div>`
-        : `${logo}<h1>IGC <span>Viewer</span></h1><p>免费 · 开源 · MIT</p><div class="url">${url}</div>`;
+        ? `${logo}<h1>${t.name}<small>${t.sub}</small></h1><p>${t.tagline}</p><div class="tags">${t.tags.map(x => `<b>${x}</b>`).join('')}</div>`
+        : `${logo}<h1>${t.name}<small>${t.sub}</small></h1><p>${t.end}</p><div class="url">${url}</div>`;
       c.classList.remove('off');
     },
     cursor(on) { document.getElementById('pv-cursor').style.opacity = on ? 1 : 0; }

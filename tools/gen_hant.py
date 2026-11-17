@@ -18,7 +18,7 @@ FIXES = {'資源管理器': '檔案總管', '許可權': '權限', '滑翔傘': 
 LANG_HANS = '**简体中文** · [繁體中文](README.zh-Hant.md)'
 LANG_HANT = '[简体中文](README.md) · **繁體中文**'
 README_FIXES = {'飛行傘（臺灣稱飛行傘）/ ': '飛行傘 / ', '臺灣': '台灣', '構建': '建置', '指令碼': '腳本',
-                '## 許可': '## 授權', '內聯': '內嵌', '聯網': '連網', '生成': '產生'}
+                '## 許可': '## 授權', '**線上使用，不用下載：https://lumitrail.app/tools/igc-viewer/**': '**線上使用，不用下載：https://lumitrail.app/tools/igc-viewer/zh-hant/**', '內聯': '內嵌', '聯網': '連網', '生成': '產生'}
 
 def runs(paths):
     out = set()

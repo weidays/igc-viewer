@@ -1,0 +1,2 @@
+script-src 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=' 'sha256-Wy9wJC0D3BlOMkNkDEUOSnb3DxHbdJeM3YsOtH0Heps=' 'sha256-H+5Tcnmb+4mfIjhGjwfWXXBhbvi3UlDX3Ad6scAl5UA=' 'sha256-pfaUqa/XXTAkI2iwly4P3tJm/bppxdpq9DF7PGOOTyI='
+style-src 'sha256-M3v8pcq9A7OYFbJwD+vis7ft9VkhxZzUn4jssyghIwM=' 'sha256-qvXL8aMV0Tie9DURhcUrGgVHirgDkQdFLHWk7f6v6WA=' 'sha256-yYTzjhiq88h+SwHZNTicL9zP7TdLxMfZovDxiyvhPk0=' 'sha256-CW6qBstPXNgeUE74qnTVZucN6Zfi4xvrgPMk+VpsQBo='

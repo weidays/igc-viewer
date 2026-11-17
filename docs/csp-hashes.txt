@@ -1,2 +1,0 @@
-script-src 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=' 'sha256-BKqUHJzM1YolDHrMo4RQ4c8XJ/ETB/97vaV+JnCfX3E='
-style-src 'sha256-M3v8pcq9A7OYFbJwD+vis7ft9VkhxZzUn4jssyghIwM=' 'sha256-U43LP2vtcjEBzbO/LfG/+6pgML/6v8fBOpxZ1ssrnCE='
