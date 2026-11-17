@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>光迹 IGC 查看器 · Lumitrail IGC Viewer</title>
 <link rel="icon" type="image/png" href="/*BRAND_ICON*/">
+<meta name="description" content="免费在线查看和清理滑翔伞 / 滑翔机 IGC 飞行记录：打开文件夹秒切换航迹，自动标出 GPS 跳点和疑似接驳车，上传竞赛平台前一键清掉废记录。文件不上传，不用注册。">
+<link rel="canonical" href="https://lumitrail.app/tools/igc-viewer/">
+<link rel="alternate" hreflang="zh-Hans" href="https://lumitrail.app/tools/igc-viewer/">
+<link rel="alternate" hreflang="zh-Hant" href="https://lumitrail.app/tools/igc-viewer/?lang=zh-Hant">
+<link rel="alternate" hreflang="x-default" href="https://lumitrail.app/tools/igc-viewer/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lumitrail.app/tools/igc-viewer/">
+<meta property="og:title" content="光迹 IGC 查看器 · Lumitrail IGC Viewer">
+<meta property="og:description" content="打开文件夹秒切换航迹，自动标出 GPS 跳点和疑似接驳车，上传竞赛平台前一键清掉废记录。文件不上传。">
+<meta property="og:image" content="https://lumitrail.app/tools/igc-viewer/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>/*LEAFLET_CSS*/</style>
 <style>
 :root{--bg:#f4f6f5;--panel:#fff;--line:#e1e6e4;--text:#1a2421;--muted:#66736f;--acc:#055a45;--on-acc:#fff;--selbg:#e2f3ee;--track:#e11d48;--prof:#0b7a5e;--proffill:rgba(11,122,94,.12)}
@@ -17,6 +28,8 @@ body{font:13px/1.4 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,s
 #brand img{width:30px;height:30px;border-radius:7px;display:block;flex:none}
 #brand b{display:block;font-size:14px;line-height:1.25}
 #brand small{display:block;color:var(--muted);font-size:11px;line-height:1.2}
+#tools .hint{color:var(--muted);font-size:12px}
+#dlgNote{color:var(--muted);font-size:12px;margin-bottom:12px}
 #foot{padding:8px 12px 10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.55}
 #foot a{color:var(--acc);text-decoration:none}
 #foot a:hover{text-decoration:underline}
@@ -106,12 +119,12 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
       <div id="count">未加载文件</div>
       <button id="btnDel" class="danger" disabled title="处理所有标了「待删」的文件">删除已标记 (0)</button>
     </div>
-    <div style="color:var(--muted);font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> 切换 · <kbd>Del</kbd> / <kbd>D</kbd> 标记待删并跳到下一个</div>
+    <div class="hint"><kbd>↑</kbd><kbd>↓</kbd> 切换 · <kbd>Del</kbd> / <kbd>D</kbd> 标记待删并跳到下一个</div>
   </div>
   <div id="list" tabindex="0"></div>
   <input id="fileInput" type="file" accept=".igc,.IGC" multiple hidden>
   <input id="dirInput" type="file" webkitdirectory hidden>
-  <div id="foot">由 <a href="https://lumitrail.app" target="_blank" rel="noopener">光迹 Lumitrail</a> 提供 · <a href="https://github.com/weidays/igc-viewer" target="_blank" rel="noopener">开源</a><br>文件只在本机读取，不会上传。地图底图会向 Esri 请求图块，因此会透露飞行区域的大致位置；介意的话请选「无底图」。</div>
+  <div id="foot">由光迹 Lumitrail 提供 · <a href="https://lumitrail.app" target="_blank" rel="noopener">lumitrail.app</a> · <a href="https://github.com/weidays/igc-viewer" target="_blank" rel="noopener">开源</a><br>文件只在本机读取，不会上传。地图底图会向 Esri 请求图块，因此会透露飞行区域的大致位置；介意的话请选「无底图」。</div>
 </aside>
 <div id="split"></div>
 <main id="main">
@@ -128,7 +141,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
 <dialog id="dlg">
   <b id="dlgTitle"></b>
   <div id="dlgList" translate="no"></div>
-  <div id="dlgNote" style="color:var(--muted);font-size:12px;margin-bottom:12px"></div>
+  <div id="dlgNote"></div>
   <div class="row">
     <button id="dlgCancel">取消</button>
     <button id="dlgHard" class="danger">永久删除</button>
@@ -700,11 +713,14 @@ function setLang(l) {
   // only watch for new text while 繁體 is on — 简体 costs nothing
   if (I18N.hant) i18nObs.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
   try { localStorage.setItem('igc.lang', $('#lang').value); } catch {}
+  if (/^https?:$/.test(location.protocol)) { const u = new URL(location.href); if (I18N.hant) u.searchParams.set('lang', 'zh-Hant'); else u.searchParams.delete('lang'); history.replaceState(null, '', u); }
 }
 { const _alert = window.alert.bind(window); window.alert = m => _alert(I18N.conv(m)); }
 $('#lang').addEventListener('change', e => setLang(e.target.value));
 {
   let l = null; try { l = localStorage.getItem('igc.lang'); } catch {}
+  const qp = (new URLSearchParams(location.search).get('lang') || '').toLowerCase();
+  if (/hant|tw|hk|mo/.test(qp)) l = 'hant'; else if (/hans|cn/.test(qp)) l = 'hans';
   if (!l) { const z = (navigator.languages || [navigator.language]).find(x => /^zh/i.test(x)) || ''; l = /^zh-(tw|hk|mo|hant)/i.test(z) ? 'hant' : 'hans'; }
   setLang(l);
 }

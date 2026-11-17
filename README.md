@@ -4,17 +4,17 @@
 
 **简体中文** · [繁體中文](README.zh-Hant.md)
 
-> 🌐 **在线使用，不用下载：https://lumitrail.app/tools/igc**
+> 🌐 **在线版即将上线：lumitrail.app/tools/igc-viewer**（上线前请先用下面的离线版）
 
 滑翔伞（台湾称飛行傘）/ 滑翔机 `.igc` 飞行记录的查看和清理工具：打开文件夹，↑↓ 秒切换看航迹，自动标出 GPS 跳点和疑似接驳车，上传竞赛平台前一键清掉废记录。由 [光迹 Lumitrail](https://lumitrail.app) 提供，免费开源。
 
-A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Use it online at **https://lumitrail.app/tools/igc** — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
+A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Online version coming soon at lumitrail.app/tools/igc-viewer — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
 
 ![demo](docs/demo.gif)
 
 ## 使用
 
-**在线**：用电脑上的 **Edge** 或 **Chrome** 打开 https://lumitrail.app/tools/igc ，点「打开文件夹」，选你存 IGC 的文件夹。不用注册。
+**在线**（即将上线）：用电脑上的 **Edge** 或 **Chrome** 打开 lumitrail.app/tools/igc-viewer ，点「打开文件夹」，选你存 IGC 的文件夹。不用注册。
 
 **离线**：下载 [`IGC-Viewer.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer.html)，双击用浏览器打开就行。没网也能看航迹，只是没有地图底图。
 
@@ -47,7 +47,7 @@ A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lu
 
 ## 关于光迹 Lumitrail
 
-光迹 Lumitrail 会安静地记下你走过的路，自动认出滑翔伞、登山等户外活动，并用 3D 回放。
+光迹 Lumitrail 是一个安静的足迹记录 App：自动记下你走过的路，认出滑翔伞、登山等户外活动，并用 3D 回放、导出视频。数据留在你自己的设备上。
 
 - 官网：https://lumitrail.app
 - iOS：[App Store 下载](https://apps.apple.com/app/id6784893459)
@@ -77,5 +77,7 @@ node record.mjs github.com/weidays/igc-viewer hant   # 繁體版 → out/promo-h
 ## 许可
 
 代码采用 MIT 授权。内含 [Leaflet](https://leafletjs.com)（BSD-2-Clause，见 [`src/LEAFLET-LICENSE`](src/LEAFLET-LICENSE)）。地图底图版权归各自提供方所有，Esri 底图按 Esri 条款显示署名。
+
+原作者：[weidays](https://github.com/weidays)。
 
 「光迹」「Lumitrail」名称和图标属于光迹，不在 MIT 授权范围内。如果你 fork 后另外发布，请换成你自己的名称和图标。

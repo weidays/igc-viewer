@@ -5,17 +5,17 @@
 
 [简体中文](README.md) · **繁體中文**
 
-> 🌐 **線上使用，不用下載：https://lumitrail.app/tools/igc**
+> 🌐 **線上版即將上線：lumitrail.app/tools/igc-viewer**（上線前請先用下面的離線版）
 
 飛行傘 / 滑翔機 `.igc` 飛行記錄的檢視和清理工具：開啟資料夾，↑↓ 秒切換看航跡，自動標出 GPS 跳點和疑似接駁車，上傳競賽平台前一鍵清掉廢記錄。由 [光跡 Lumitrail](https://lumitrail.app) 提供，免費開源。
 
-A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Use it online at **https://lumitrail.app/tools/igc** — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
+A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Online version coming soon at lumitrail.app/tools/igc-viewer — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
 
 ![demo](docs/demo.gif)
 
 ## 使用
 
-**線上**：用電腦上的 **Edge** 或 **Chrome** 開啟 https://lumitrail.app/tools/igc ，點「開啟資料夾」，選你存 IGC 的資料夾。不用註冊。
+**線上**（即將上線）：用電腦上的 **Edge** 或 **Chrome** 開啟 lumitrail.app/tools/igc-viewer ，點「開啟資料夾」，選你存 IGC 的資料夾。不用註冊。
 
 **離線**：下載 [`IGC-Viewer.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer.html)，雙擊用瀏覽器開啟就行。沒網也能看航跡，只是沒有地圖底圖。
 
@@ -48,7 +48,7 @@ A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lu
 
 ## 關於光跡 Lumitrail
 
-光跡 Lumitrail 會安靜地記下你走過的路，自動認出飛行傘、登山等戶外活動，並用 3D 回放。
+光跡 Lumitrail 是一個安靜的足跡記錄 App：自動記下你走過的路，認出飛行傘、登山等戶外活動，並用 3D 回放、匯出影片。資料留在你自己的裝置上。
 
 - 官網：https://lumitrail.app
 - iOS：[App Store 下載](https://apps.apple.com/app/id6784893459)
@@ -78,5 +78,7 @@ node record.mjs github.com/weidays/igc-viewer hant   # 繁體版 → out/promo-h
 ## 授權
 
 程式碼採用 MIT 授權。內含 [Leaflet](https://leafletjs.com)（BSD-2-Clause，見 [`src/LEAFLET-LICENSE`](src/LEAFLET-LICENSE)）。地圖底圖版權歸各自提供方所有，Esri 底圖按 Esri 條款顯示署名。
+
+原作者：[weidays](https://github.com/weidays)。
 
 「光跡」「Lumitrail」名稱和圖示屬於光跡，不在 MIT 授權範圍內。如果你 fork 後另外發布，請換成你自己的名稱和圖示。

@@ -19,3 +19,11 @@ html = html.replace('/*LEAFLET_CSS*/', (s/'leaflet.css').read_text('utf-8'), 1)
 html = html.replace('/*LEAFLET_JS*/', (s/'leaflet.js').read_text('utf-8').replace('</script', '<\\/script'), 1)
 (root/'IGC-Viewer.html').write_text(html, 'utf-8')
 print('ok', len(html), 'bytes,', len(hant), 'hant entries')
+# CSP hashes for the inline <script> / <style> blocks (for the hosting site's _headers)
+import hashlib
+def h(x): return "'sha256-" + base64.b64encode(hashlib.sha256(x.encode('utf-8')).digest()).decode() + "'"
+scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
+styles = re.findall(r'<style>(.*?)</style>', html, re.S)
+csp = ("script-src " + " ".join(map(h, scripts)) + "\nstyle-src " + " ".join(map(h, styles)) + "\n")
+(root/'docs'/'csp-hashes.txt').write_text(csp, 'utf-8')
+print('csp hashes:', len(scripts), 'scripts,', len(styles), 'styles -> docs/csp-hashes.txt')
