@@ -1,20 +1,24 @@
-# IGC Viewer
+<p align="center"><img src="src/lumitrail-icon.png" width="72" alt="光迹 Lumitrail"></p>
+
+# 光迹 IGC 查看器 · Lumitrail IGC Viewer
 
 **简体中文** · [繁體中文](README.zh-Hant.md)
 
-一个**单文件、双击即用**的 IGC 飞行记录查看器，用来快速浏览、筛选和清理滑翔伞（台湾称飛行傘）/ 滑翔机的 `.igc` 航迹文件。
+> 🌐 **在线使用，不用下载：https://lumitrail.app/tools/igc**
 
-A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding). Open a folder, flip through flights with the arrow keys, spot GPS glitches, and clean out bad files.
+滑翔伞（台湾称飛行傘）/ 滑翔机 `.igc` 飞行记录的查看和清理工具：打开文件夹，↑↓ 秒切换看航迹，自动标出 GPS 跳点和疑似接驳车，上传竞赛平台前一键清掉废记录。由 [光迹 Lumitrail](https://lumitrail.app) 提供，免费开源。
+
+A free, open-source viewer for `.igc` flight logs (paragliding / gliding) by [Lumitrail](https://lumitrail.app). Use it online at **https://lumitrail.app/tools/igc** — open a folder, flip through flights with the arrow keys, spot GPS glitches and shuttle rides, and clean out bad files before uploading to a competition server.
 
 ![demo](docs/demo.gif)
 
-## 下载使用
+## 使用
 
-1. 下载 [`IGC-Viewer.html`](IGC-Viewer.html)（点进去后点右上角的下载按钮）。
-2. 用 **Edge** 或 **Chrome** 打开（Windows / macOS / Linux 都可以）。
-3. 点「打开文件夹」，选你存 IGC 的文件夹。
+**在线**：用电脑上的 **Edge** 或 **Chrome** 打开 https://lumitrail.app/tools/igc ，点「打开文件夹」，选你存 IGC 的文件夹。不用注册。
 
-不需要安装、不需要联网（联网时显示地图底图，没网也能看航迹）。文件只在你自己的电脑上读取，不会上传到任何地方。
+**离线**：下载 [`IGC-Viewer.html`](https://github.com/weidays/igc-viewer/releases/latest/download/IGC-Viewer.html)，双击用浏览器打开就行。没网也能看航迹，只是没有地图底图。
+
+**隐私**：IGC 文件只在你自己的电脑上读取，不会上传到任何地方。地图底图会向 Esri 请求图块，因此会透露飞行区域的大致位置；介意的话，在右上角「底图」里选「无底图」。
 
 ## 功能
 
@@ -41,6 +45,13 @@ A single-file, zero-install viewer for `.igc` flight logs (paragliding / gliding
 
 > 删除和「上次文件夹」依赖浏览器的 File System Access API，需要 Edge / Chrome 等 Chromium 内核浏览器。Firefox / Safari 可以浏览，但不能删除。
 
+## 关于光迹 Lumitrail
+
+光迹 Lumitrail 会安静地记下你走过的路，自动认出滑翔伞、登山等户外活动，并用 3D 回放。
+
+- 官网：https://lumitrail.app
+- iOS：[App Store 下载](https://apps.apple.com/app/id6784893459)
+
 ## 开发
 
 源码在 [`src/template.html`](src/template.html)，Leaflet 在构建时内联进去：
@@ -65,4 +76,6 @@ node record.mjs github.com/weidays/igc-viewer hant   # 繁體版 → out/promo-h
 
 ## 许可
 
-MIT。内含 [Leaflet](https://leafletjs.com)（BSD-2-Clause，见 [`src/LEAFLET-LICENSE`](src/LEAFLET-LICENSE)）。地图底图版权归各自提供方所有。
+代码采用 MIT 授权。内含 [Leaflet](https://leafletjs.com)（BSD-2-Clause，见 [`src/LEAFLET-LICENSE`](src/LEAFLET-LICENSE)）。地图底图版权归各自提供方所有，Esri 底图按 Esri 条款显示署名。
+
+「光迹」「Lumitrail」名称和图标属于光迹，不在 MIT 授权范围内。如果你 fork 后另外发布，请换成你自己的名称和图标。

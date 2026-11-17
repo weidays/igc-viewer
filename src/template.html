@@ -3,21 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IGC Viewer</title>
+<title>光迹 IGC 查看器 · Lumitrail IGC Viewer</title>
+<link rel="icon" type="image/png" href="/*BRAND_ICON*/">
 <style>/*LEAFLET_CSS*/</style>
 <style>
-:root{--bg:#f4f5f7;--panel:#fff;--line:#e2e5e9;--text:#1c2228;--muted:#6b7480;--acc:#2563eb;--selbg:#e6efff;--track:#e11d48;--prof:#2563eb;--proffill:rgba(37,99,235,.12)}
-@media (prefers-color-scheme:dark){:root{--bg:#14171b;--panel:#1c2026;--line:#2b3139;--text:#e5e8ec;--muted:#8a939e;--acc:#60a5fa;--selbg:#1d3557;--track:#fb7185;--prof:#60a5fa;--proffill:rgba(96,165,250,.15)}}
+:root{--bg:#f4f6f5;--panel:#fff;--line:#e1e6e4;--text:#1a2421;--muted:#66736f;--acc:#055a45;--on-acc:#fff;--selbg:#e2f3ee;--track:#e11d48;--prof:#0b7a5e;--proffill:rgba(11,122,94,.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1514;--panel:#161e1c;--line:#26312e;--text:#e3ebe8;--muted:#86948f;--acc:#3be3c0;--on-acc:#062b23;--selbg:#123a32;--track:#fb7185;--prof:#3be3c0;--proffill:rgba(59,227,192,.14)}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font:13px/1.4 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);display:grid;grid-template-columns:var(--sidew,340px) 5px minmax(0,1fr);height:100vh;overflow:hidden}
 #side{display:flex;flex-direction:column;background:var(--panel);min-width:0}
+#brand{display:flex;align-items:center;gap:10px;padding:12px 12px 2px;color:inherit;text-decoration:none}
+#brand img{width:30px;height:30px;border-radius:7px;display:block;flex:none}
+#brand b{display:block;font-size:14px;line-height:1.25}
+#brand small{display:block;color:var(--muted);font-size:11px;line-height:1.2}
+#foot{padding:8px 12px 10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.55}
+#foot a{color:var(--acc);text-decoration:none}
+#foot a:hover{text-decoration:underline}
 #tools{padding:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
 .row{display:flex;gap:6px}
 button,select,input{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 9px}
 button{cursor:pointer;white-space:nowrap}
 button:hover{border-color:var(--acc)}
-button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button.primary{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
 #search{flex:1;min-width:0}
 #lang{margin-left:auto;padding:5px 4px}
 #btnSus{padding:5px 8px;font-size:12px}
@@ -68,13 +76,15 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 #empty b{color:var(--text);font-size:15px}
 #mapbox{position:relative;min-height:0}
 #mapbox #map{position:absolute;inset:0}
-body.drag #mapbox::after{content:var(--t-drop,"松开以加载 IGC 文件 / 文件夹");position:absolute;inset:10px;border:3px dashed var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(37,99,235,.08);z-index:1000}
+body.drag #mapbox::after{content:var(--t-drop,"松开以加载 IGC 文件 / 文件夹");position:absolute;inset:10px;border:3px dashed var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(5,90,69,.08);z-index:1000}
 .leaflet-container{font:inherit}
+.leaflet-control-attribution{font-size:10px;line-height:1.35}
 kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-size:11px}
 </style>
 </head>
 <body>
 <aside id="side">
+  <a id="brand" href="https://lumitrail.app" target="_blank" rel="noopener" title="光迹 Lumitrail"><img src="/*BRAND_ICON*/" alt=""><span><b>光迹 IGC 查看器</b><small translate="no">Lumitrail IGC Viewer</small></span></a>
   <div id="tools">
     <div class="row">
       <button id="btnDir" class="primary" title="选择文件夹（会递归扫描子文件夹）">打开文件夹</button>
@@ -101,6 +111,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
   <div id="list" tabindex="0"></div>
   <input id="fileInput" type="file" accept=".igc,.IGC" multiple hidden>
   <input id="dirInput" type="file" webkitdirectory hidden>
+  <div id="foot">由 <a href="https://lumitrail.app" target="_blank" rel="noopener">光迹 Lumitrail</a> 提供 · <a href="https://github.com/weidays/igc-viewer" target="_blank" rel="noopener">开源</a><br>文件只在本机读取，不会上传。地图底图会向 Esri 请求图块，因此会透露飞行区域的大致位置；介意的话请选「无底图」。</div>
 </aside>
 <div id="split"></div>
 <main id="main">
@@ -110,7 +121,7 @@ kbd{font-family:inherit;border:1px solid var(--line);border-bottom-width:2px;bor
   </div>
   <div id="mapbox">
     <div id="map"></div>
-    <div id="empty"><b>打开一个包含 .igc 的文件夹</b><div>或把文件 / 文件夹直接拖进来</div></div>
+    <div id="empty"><b>打开一个包含 .igc 的文件夹</b><div>或把文件 / 文件夹直接拖进来</div><div>文件只在本机读取，不会上传</div></div>
   </div>
   <div id="profwrap"><canvas id="prof"></canvas><div id="tip"></div></div>
 </main>
@@ -457,9 +468,9 @@ async function select(i) {
 const map = L.map('map', { preferCanvas: true, zoomSnap: 0.25, attributionControl: true }).setView([30, 105], 4);
 const ren = L.canvas({ padding: 0.3 });
 const tiles = {
-  'Esri 地形': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' }),
-  'Esri 卫星': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' }),
-  'OpenTopoMap': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap © OSM' }),
+  'Esri 地形': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Powered by <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> | Tiles &copy; Esri &mdash; Sources: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), &copy; OpenStreetMap contributors, and the GIS User Community' }),
+  'Esri 卫星': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Powered by <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> | Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community' }),
+  'OpenTopoMap': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: 'Map data &copy; OpenStreetMap contributors, SRTM | Style &copy; OpenTopoMap (CC-BY-SA)' }),
   '无底图（最快）': L.layerGroup()
 };
 let baseName = 'Esri 地形'; try { const s = localStorage.getItem('igc.base'); if (s && tiles[s]) baseName = s; } catch {}
@@ -684,6 +695,7 @@ function setLang(l) {
   $('#lang').value = I18N.hant ? 'hant' : 'hans';
   for (const [k, v] of [['--t-del', '待删 '], ['--t-base', '底图'], ['--t-drop', '松开以加载 IGC 文件 / 文件夹']]) document.documentElement.style.setProperty(k, JSON.stringify(I18N.conv(v)));
   i18nObs.disconnect();
+  document.title = I18N.conv('光迹 IGC 查看器') + ' · Lumitrail IGC Viewer';
   i18nTree(document.body);
   // only watch for new text while 繁體 is on — 简体 costs nothing
   if (I18N.hant) i18nObs.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });

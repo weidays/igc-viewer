@@ -12,6 +12,9 @@ if missing:
 hant = {k: v for k, v in table.items() if k != v}
 
 html = html.replace('/*ZH_HANT*/{}', json.dumps(hant, ensure_ascii=False, separators=(',', ':')), 1)
+import base64
+icon = 'data:image/png;base64,' + base64.b64encode((s/'lumitrail-icon.png').read_bytes()).decode()
+html = html.replace('/*BRAND_ICON*/', icon)
 html = html.replace('/*LEAFLET_CSS*/', (s/'leaflet.css').read_text('utf-8'), 1)
 html = html.replace('/*LEAFLET_JS*/', (s/'leaflet.js').read_text('utf-8').replace('</script', '<\\/script'), 1)
 (root/'IGC-Viewer.html').write_text(html, 'utf-8')
